@@ -1,0 +1,161 @@
+html {
+  /*user-select: none;
+  -webkit-user-select: none;*/
+}
+
+body {
+  margin: 0;
+  padding: 0;
+}
+
+#pdfWrapper {
+  position: fixed;
+  width: 100vw;
+  height: 100vh;
+  top: 0;
+  left: 0;
+}
+
+#homeWrapper {
+  position: fixed;
+  width: 100vw;
+  height: 100vh;
+  top: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+#buttonWrapper {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: flex-end;
+  width: 100vw;
+  height: 40vh;
+  position: fixed;
+  bottom: 20vh;
+}
+
+.homeButton {
+  font-size: 4vw;
+  width: 20vw;
+  margin: 0 5vw;
+}
+
+#aboutWrapper {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+#guessButton {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 5vh;
+}
+
+.newspaperPdf {
+  width: 100vw;
+  height: 95vh;
+  position: fixed;
+  top: 5vh;
+  left: 0;
+}
+
+#guessWrapper {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#guessBox {
+  width: auto;
+  height: auto;
+  background-color: white;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3vh 3vw;
+  border: 5px solid black;
+}
+
+#guessInputs {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  align-items: center;
+  font-size: 2vw;
+}
+
+.guessInput {
+  margin: 1vh 2vw;
+}
+
+.guessInputValue {
+  font-size: 2vw;
+}
+
+#guessButtons {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  margin-top: 3vh;
+  font-size: 3vw;
+}
+
+#cancelGuessButton {
+  margin: 0 3vw;
+  font-size: 3vw;
+}
+
+#submitGuessButton {
+  margin: 0 3vw;
+  font-size: 3vw;
+}
+
+#scoreWrapper {
+  position: fixed;
+  top: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100vw;
+  height: 100vh;
+  background-image: url("../img/bg_no_icon.png");
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+}
+
+#animationWrapper {
+  position: fixed;
+  top: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100vw;
+  height: 100vh;
+  background-color: black;
+}
+
+#animationCanvas {
+  aspect-ratio: 16 / 9;
+  object-fit: contain;
+  width: 100vw;
+  height: 100vh;
+}
