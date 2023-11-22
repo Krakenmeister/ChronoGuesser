@@ -11,6 +11,9 @@ let antebellumFrames;
 let victorianFrames;
 let suburbanFrames;
 
+let ridingFrames;
+let throwingFrames;
+
 function home() {
   document.getElementById("homeWrapper").innerHTML = `
     <div id="buttonWrapper">
@@ -106,6 +109,12 @@ async function startGame(numPapers, timeLimit) {
     for (let i = 0; i < 38; i++) {
       assetPromises.push(loadImage(`./img/animations/delivery_suburban/frame_${i}.png`));
     }
+    for (let i = 0; i < 16; i++) {
+      assetPromises.push(loadImage(`./img/animations/riding/frame_${i}.png`));
+    }
+    for (let i = 0; i < 32; i++) {
+      assetPromises.push(loadImage(`./img/animations/throwing/frame_${i}.png`));
+    }
   }
 
   let documents;
@@ -120,6 +129,8 @@ async function startGame(numPapers, timeLimit) {
       antebellumFrames = assets.slice(43, 81);
       victorianFrames = assets.slice(81, 119);
       suburbanFrames = assets.slice(119, 157);
+      ridingFrames = assets.slice(157, 173);
+      throwingFrames = assets.slice(173, 205);
     }
   });
 
@@ -144,36 +155,140 @@ async function startGame(numPapers, timeLimit) {
   document.getElementById(`newspaper${currentPaper}`).style.visibility = "visible";
   document.getElementById("guessButton").focus();
 
-  document.getElementById("guessButton").addEventListener("click", () => {
+  document.getElementById("guessButton").addEventListener("click", async () => {
     let guessWrapper = document.createElement("div");
     guessWrapper.id = "guessWrapper";
     guessWrapper.innerHTML = `
         <div id="guessBox">
-          <div id="guessInputs">
-            <div class="guessInput">
-              <label for="guessDay">Day:</label>
-              <input type="number" class="guessInputValue" id="guessDay" name="guessDay" min="1" max="31" value="1">
+          <div id="guessContent">
+            <div id="guessInputs">
+              <div class="guessInput">
+                <label for="guessDay">Day:</label>
+                <input type="number" class="guessInputValue" id="guessDay" name="guessDay" min="1" max="31" value="1">
+              </div>
+              <div class="guessInput">
+                <label for="guessMonth">Month:</label>
+                <input type="number" class="guessInputValue" id="guessMonth" name="guessMonth" min="1" max="12" value="1">
+              </div>
+              <div class="guessInput">
+                <label for="guessYear">Year:</label>
+                <input type="number" class="guessInputValue" id="guessYear" name="guessYear" min="1790" max="1963" value="1790">
+              </div>
             </div>
-            <div class="guessInput">
-              <label for="guessMonth">Month:</label>
-              <input type="number" class="guessInputValue" id="guessMonth" name="guessMonth" min="1" max="12" value="1">
-            </div>
-            <div class="guessInput">
-              <label for="guessYear">Year:</label>
-              <input type="number" class="guessInputValue" id="guessYear" name="guessYear" min="1790" max="1963" value="1790">
+            <div id="guessButtons">
+              <canvas id="boyAnimation" width="1920" height="1080"></canvas>
+              <button id="cancelGuessButton">Cancel</button>
+              <button id="submitGuessButton">Deliver</button>
             </div>
           </div>
-          <div id="guessButtons">
-            <button id="cancelGuessButton">Cancel</button>
-            <button id="submitGuessButton">Deliver</button>
-          </div>
+          <img id="scrollLeft" src="../img/scroll_left.png">
+          <img id="scrollRight" src="../img/scroll_right.png">
         </div>
       `;
 
     document.getElementById("pdfWrapper").appendChild(guessWrapper);
     document.getElementById("guessDay").focus();
 
-    document.getElementById("cancelGuessButton").addEventListener("click", () => {
+    let ctx = document.getElementById("boyAnimation").getContext("2d");
+    let animationFrame = 0;
+    let startThrowFlag = -1;
+
+    let ridingAnimation = setInterval(() => {
+      if (startThrowFlag > 2 && animationFrame == 0) {
+        clearInterval(ridingAnimation);
+        let throwingAnimation = setInterval(async () => {
+          ctx.clearRect(0, 0, 1920, 1080);
+          ctx.drawImage(throwingFrames[animationFrame], 0, 0, 1920, 1080);
+          animationFrame = (animationFrame + 1) % 32;
+          if (animationFrame == 0) {
+            clearInterval(throwingAnimation);
+            document.getElementById("guessWrapper").remove();
+            document.getElementById(`newspaper${currentPaper}`).style.visibility = "hidden";
+            currentPaper++;
+
+            let guessYear = parseInt(guesses[guesses.length - 1].year);
+            if (guessYear < 1830) {
+              await playDeliveryAnimation(0);
+            } else if (guessYear < 1870) {
+              await playDeliveryAnimation(1);
+            } else if (guessYear < 1940) {
+              await playDeliveryAnimation(2);
+            } else {
+              await playDeliveryAnimation(3);
+            }
+
+            if (currentPaper == numPapers) {
+              // End game
+              let score = 0;
+              let scores = [];
+              for (let i = 0; i < numPapers; i++) {
+                let actualDate = dateToDecimal(parseInt(documents[i].date.year), parseInt(documents[i].date.month), parseInt(documents[i].date.day));
+                let guessedDate = dateToDecimal(parseInt(guesses[i].year), parseInt(guesses[i].month), parseInt(guesses[i].day));
+                let thisScore = calculateScore(guessedDate, actualDate);
+                score += thisScore;
+                scores.push(thisScore);
+              }
+              document.getElementById("homeWrapper").innerHTML = `
+                  <div id="scoreWrapper">
+                    <div id="scoreTitle">You scored ${score} out of ${1000 * numPapers}</div>
+                    <div id="papersWrapper"></div>
+                    <div id="continueButtons">
+                      <button id="homeButton">Home</button>
+                      <button id="replayButton">Play Again</button>
+                    </div>
+                  </div>
+                `;
+
+              for (let i = 0; i < numPapers; i++) {
+                document.getElementById("papersWrapper").innerHTML += `
+                    <div class="paperWrapper">
+                      <div class="paperTitle"></div>
+                      <div class="paperDate"></div>
+                      <div class="guessDate"></div>
+                      <div class="paperScore"></div>
+                    </div>
+                  `;
+              }
+
+              document.getElementById("homeButton").addEventListener("click", () => {
+                home();
+              });
+
+              document.getElementById("replayButton").addEventListener("click", () => {
+                startGame(numPapers, timeLimit);
+              });
+            } else {
+              document.getElementById(`newspaper${currentPaper}`).style.visibility = "visible";
+              document.getElementById("guessButton").focus();
+            }
+          }
+        }, 35);
+      } else {
+        if (startThrowFlag != -1 && animationFrame == 0) {
+          if (startThrowFlag == 0) {
+            document.getElementById("boyAnimation").style.animation = "rideRight 3s linear";
+          }
+          startThrowFlag++;
+        }
+        ctx.clearRect(0, 0, 1920, 1080);
+        ctx.drawImage(ridingFrames[animationFrame], 0, 0, 1920, 1080);
+        animationFrame = (animationFrame + 1) % 16;
+      }
+    }, 35);
+
+    document.getElementById("guessContent").style.animation = "revealBody 0.7s ease-out";
+    document.getElementById("scrollLeft").style.animation = "unfurlLeft 0.7s ease-out";
+    document.getElementById("scrollRight").style.animation = "unfurlRight 0.7s ease-out";
+    await delay(700);
+    document.getElementById("guessContent").style.animation = "";
+    document.getElementById("scrollLeft").style.animation = "";
+    document.getElementById("scrollRight").style.animation = "";
+
+    document.getElementById("cancelGuessButton").addEventListener("click", async () => {
+      document.getElementById("guessContent").style.animation = "revealBody 0.4s ease-in reverse forwards";
+      document.getElementById("scrollLeft").style.animation = "unfurlLeft 0.4s ease-in reverse forwards";
+      document.getElementById("scrollRight").style.animation = "unfurlRight 0.4s ease-in reverse forwards";
+      await delay(400);
       document.getElementById("guessWrapper").remove();
       document.getElementById("guessButton").focus();
     });
@@ -185,65 +300,9 @@ async function startGame(numPapers, timeLimit) {
         day: document.getElementById("guessDay").value,
       });
 
-      document.getElementById("guessWrapper").remove();
-      document.getElementById(`newspaper${currentPaper}`).style.visibility = "hidden";
-      currentPaper++;
-
-      let guessYear = parseInt(guesses[guesses.length - 1].year);
-      if (guessYear < 1830) {
-        await playDeliveryAnimation(0);
-      } else if (guessYear < 1870) {
-        await playDeliveryAnimation(1);
-      } else if (guessYear < 1940) {
-        await playDeliveryAnimation(2);
-      } else {
-        await playDeliveryAnimation(3);
-      }
-
-      if (currentPaper == numPapers) {
-        // End game
-        let score = 0;
-        let scores = [];
-        for (let i = 0; i < numPapers; i++) {
-          let actualDate = dateToDecimal(parseInt(documents[i].date.year), parseInt(documents[i].date.month), parseInt(documents[i].date.day));
-          let guessedDate = dateToDecimal(parseInt(guesses[i].year), parseInt(guesses[i].month), parseInt(guesses[i].day));
-          let thisScore = calculateScore(guessedDate, actualDate);
-          score += thisScore;
-          scores.push(thisScore);
-        }
-        document.getElementById("homeWrapper").innerHTML = `
-            <div id="scoreWrapper">
-              <div id="scoreTitle">You scored ${score} out of ${1000 * numPapers}</div>
-              <div id="papersWrapper"></div>
-              <div id="continueButtons">
-                <button id="homeButton">Home</button>
-                <button id="replayButton">Play Again</button>
-              </div>
-            </div>
-          `;
-
-        for (let i = 0; i < numPapers; i++) {
-          document.getElementById("papersWrapper").innerHTML += `
-              <div class="paperWrapper">
-                <div class="paperTitle"></div>
-                <div class="paperDate"></div>
-                <div class="guessDate"></div>
-                <div class="paperScore"></div>
-              </div>
-            `;
-        }
-
-        document.getElementById("homeButton").addEventListener("click", () => {
-          home();
-        });
-
-        document.getElementById("replayButton").addEventListener("click", () => {
-          startGame(numPapers, timeLimit);
-        });
-      } else {
-        document.getElementById(`newspaper${currentPaper}`).style.visibility = "visible";
-        document.getElementById("guessButton").focus();
-      }
+      document.getElementById("cancelGuessButton").style.visibility = "hidden";
+      document.getElementById("submitGuessButton").style.visibility = "hidden";
+      startThrowFlag = 0;
     });
   });
 }
@@ -390,20 +449,22 @@ function processPdf(base64String) {
 
 home();
 
-let delivering = false;
-window.addEventListener("keydown", (event) => {
-  if (event.key == "Enter") {
-    if (document.getElementById("submitGuessButton")) {
-      delivering = true;
-    }
-  }
-});
+// let delivering = false;
+// window.addEventListener("keydown", (event) => {
+//   if (event.key == "Enter") {
+//     if (document.getElementById("cancelGuessButton")) {
+//       if (document.activeElement !== document.getElementById("cancelGuessButton")) {
+//         delivering = true;
+//       }
+//     }
+//   }
+// });
 
-window.addEventListener("keyup", (event) => {
-  if (event.key == "Enter") {
-    if (document.getElementById("submitGuessButton") && delivering) {
-      document.getElementById("submitGuessButton").click();
-    }
-    delivering = false;
-  }
-});
+// window.addEventListener("keyup", (event) => {
+//   if (event.key == "Enter") {
+//     if (document.getElementById("submitGuessButton") && delivering) {
+//       document.getElementById("submitGuessButton").click();
+//     }
+//     delivering = false;
+//   }
+// });
