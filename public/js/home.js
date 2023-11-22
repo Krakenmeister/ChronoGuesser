@@ -13,6 +13,7 @@ let suburbanFrames;
 
 let ridingFrames;
 let throwingFrames;
+let movingFrames;
 
 function home() {
   document.getElementById("homeWrapper").innerHTML = `
@@ -115,6 +116,9 @@ async function startGame(numPapers, timeLimit) {
     for (let i = 0; i < 32; i++) {
       assetPromises.push(loadImage(`./img/animations/throwing/frame_${i}.png`));
     }
+    for (let i = 0; i < 14; i++) {
+      assetPromises.push(loadImage(`./img/animations/moving/frame_${i}.png`));
+    }
   }
 
   let documents;
@@ -131,6 +135,7 @@ async function startGame(numPapers, timeLimit) {
       suburbanFrames = assets.slice(119, 157);
       ridingFrames = assets.slice(157, 173);
       throwingFrames = assets.slice(173, 205);
+      movingFrames = assets.slice(205, 219);
     }
   });
 
@@ -194,7 +199,7 @@ async function startGame(numPapers, timeLimit) {
     let startThrowFlag = -1;
 
     let ridingAnimation = setInterval(() => {
-      if (startThrowFlag > 2 && animationFrame == 0) {
+      if (startThrowFlag > 0 && animationFrame == 0) {
         clearInterval(ridingAnimation);
         let throwingAnimation = setInterval(async () => {
           ctx.clearRect(0, 0, 1920, 1080);
@@ -266,13 +271,19 @@ async function startGame(numPapers, timeLimit) {
       } else {
         if (startThrowFlag != -1 && animationFrame == 0) {
           if (startThrowFlag == 0) {
-            document.getElementById("boyAnimation").style.animation = "rideRight 3s linear";
+            document.getElementById("boyAnimation").style.animation = "rideRight 2s linear";
           }
           startThrowFlag++;
         }
-        ctx.clearRect(0, 0, 1920, 1080);
-        ctx.drawImage(ridingFrames[animationFrame], 0, 0, 1920, 1080);
-        animationFrame = (animationFrame + 1) % 16;
+        if (startThrowFlag > 0) {
+          ctx.clearRect(0, 0, 1920, 1080);
+          ctx.drawImage(movingFrames[animationFrame], 0, 0, 1920, 1080);
+          animationFrame = (animationFrame + 1) % 14;
+        } else {
+          ctx.clearRect(0, 0, 1920, 1080);
+          ctx.drawImage(ridingFrames[animationFrame], 0, 0, 1920, 1080);
+          animationFrame = (animationFrame + 1) % 16;
+        }
       }
     }, 35);
 
