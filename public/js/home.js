@@ -94,16 +94,16 @@ async function startGame(numPapers, timeLimit) {
     assetPromises.push(loadImage(`./img/bg_house_antebellum.png`));
     assetPromises.push(loadImage(`./img/bg_house_victorian.png`));
     assetPromises.push(loadImage(`./img/bg_house_suburban.png`));
-    for (let i = 0; i < 37; i++) {
+    for (let i = 0; i < 38; i++) {
       assetPromises.push(loadImage(`./img/animations/delivery_colonial/frame_${i}.png`));
     }
-    for (let i = 0; i < 37; i++) {
+    for (let i = 0; i < 38; i++) {
       assetPromises.push(loadImage(`./img/animations/delivery_antebellum/frame_${i}.png`));
     }
-    for (let i = 0; i < 37; i++) {
+    for (let i = 0; i < 38; i++) {
       assetPromises.push(loadImage(`./img/animations/delivery_victorian/frame_${i}.png`));
     }
-    for (let i = 0; i < 37; i++) {
+    for (let i = 0; i < 38; i++) {
       assetPromises.push(loadImage(`./img/animations/delivery_suburban/frame_${i}.png`));
     }
   }
@@ -116,10 +116,10 @@ async function startGame(numPapers, timeLimit) {
       antebellumBG = assets[2];
       victorianBG = assets[3];
       suburbanBG = assets[4];
-      colonialFrames = assets.slice(5, 42);
-      antebellumFrames = assets.slice(42, 79);
-      victorianFrames = assets.slice(79, 116);
-      suburbanFrames = assets.slice(116, 153);
+      colonialFrames = assets.slice(5, 43);
+      antebellumFrames = assets.slice(43, 81);
+      victorianFrames = assets.slice(81, 119);
+      suburbanFrames = assets.slice(119, 157);
     }
   });
 
@@ -291,15 +291,16 @@ async function playDeliveryAnimation(animationEnum) {
   }
 
   ctx.drawImage(bg, 0, 0, 1920, 1080);
+  ctx.drawImage(frames[0], 0, 0, 1920, 1080);
   await delay(1000);
 
   for (let i = 0; i < frames.length; i++) {
     ctx.drawImage(bg, 0, 0, 1920, 1080);
     ctx.drawImage(frames[i], 0, 0, 1920, 1080);
-    await delay(40);
+    await delay(35);
   }
 
-  await delay(2000);
+  await delay(500);
 
   document.getElementById("animationWrapper").remove();
   document.getElementById("homeWrapper").style.display = "flex";

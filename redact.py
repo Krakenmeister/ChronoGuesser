@@ -5,20 +5,20 @@ import sys
 from ocrmypdf.hocrtransform import HocrTransform
 
 hocr = HocrTransform(
-    hocr_filename="./newspapers/" + sys.argv[1] + "-hocr.xml",
+    hocr_filename="./processing/" + sys.argv[1] + "-hocr.xml",
     dpi=300
 )
 
 # step to obtain ocirized pdf
 hocr.to_pdf(
-    out_filename="./newspapers/" + sys.argv[1] + "-hocr.pdf",
-    image_filename="./newspapers/" + sys.argv[1] + "-loc.jp2",
+    out_filename="./processing/" + sys.argv[1] + "-hocr.pdf",
+    image_filename="./processing/" + sys.argv[1] + "-loc.jp2",
     show_bounding_boxes=False,
     interword_spaces=True,
     invisible_text=True,
 )
 
-os.unlink("./newspapers/" + sys.argv[1] + "-hocr.xml")
+os.unlink("./processing/" + sys.argv[1] + "-hocr.xml")
 
 print("Wrote to pdf")
 
@@ -35,7 +35,7 @@ def get_sensitive_data(text):
         yield match.group(1)
 
 
-doc = fitz.open("./newspapers/" + sys.argv[1] + "-hocr.pdf")
+doc = fitz.open("./processing/" + sys.argv[1] + "-hocr.pdf")
 # iterating through pages
 for page in doc:
     # wrap contents is needed for fixing
@@ -55,11 +55,11 @@ for page in doc:
     page.apply_redactions()
 
 doc.set_metadata({"title": "Chronicling America Newspaper"})
-doc.save("./newspapers/" + sys.argv[1] + "-redacted.pdf")
+doc.save("./newspapers/" + sys.argv[1] + ".pdf")
 doc.close()
 
-os.unlink("./newspapers/" + sys.argv[1] + "-loc.pdf")
-os.unlink("./newspapers/" + sys.argv[1] + "-loc.jp2")
-os.unlink("./newspapers/" + sys.argv[1] + "-hocr.pdf")
+os.unlink("./processing/" + sys.argv[1] + "-loc.jpg")
+os.unlink("./processing/" + sys.argv[1] + "-loc.jp2")
+os.unlink("./processing/" + sys.argv[1] + "-hocr.pdf")
 
 print("Redacted pdf")

@@ -2,10 +2,63 @@ import re
 import fitz
 import os
 import sys
+import math
+import io
 from ocrmypdf.hocrtransform import HocrTransform
 from google.api_core.client_options import ClientOptions
 from google.cloud import documentai
 from google.cloud.documentai_toolbox import document
+
+from PIL import Image
+
+
+def JPEGSaveWithTargetSize(im, filename, target):
+    """Save the image as JPEG with the given name at best quality that makes less than "target" bytes"""
+    # Min and Max quality
+    Qmin, Qmax = 25, 100
+
+    # Try max quality first, skip looping if it is acceptable
+    buffer = io.BytesIO()
+    im.save(buffer, format="JPEG", quality=Qmax)
+    s = buffer.getbuffer().nbytes
+
+    if s <= target:
+        print("Max quality acceptable")
+        im.save(filename, format="JPEG", quality=Qmax)
+        return
+
+    print("Max quality too big")
+
+    # Highest acceptable quality found
+    Qacc = -1
+    while Qmin <= Qmax:
+        m = math.floor((Qmin + Qmax) / 2)
+
+        # Encode into memory and get size
+        buffer = io.BytesIO()
+        im.save(buffer, format="JPEG", quality=m)
+        s = buffer.getbuffer().nbytes
+
+        if s <= target:
+            Qacc = m
+            Qmin = m + 1
+            # 80% - 100% target is good enough, save time and quit now
+            if s >= (0.8 * target):
+                im.save(filename, format="JPEG", quality=Qacc)
+                return
+        elif s > target:
+            Qmax = m - 1
+
+    # Write to disk at the defined quality
+    if Qacc > -1:
+        im.save(filename, format="JPEG", quality=Qacc)
+    else:
+        print("ERROR: No acceptble quality factor found", file=sys.stderr)
+
+
+jp2 = Image.open("./processing/" + sys.argv[1] + "-loc.jp2")
+JPEGSaveWithTargetSize(jp2, "./processing/" +
+                       sys.argv[1] + "-loc.jpg", 20000000)
 
 
 PROJECT_ID = "112216068324"
@@ -14,11 +67,10 @@ PROCESSOR_ID = "83a7966a2733926b"  # Create processor in Cloud Console
 PROCESSOR_VERSION = "pretrained-ocr-v2.0-2023-06-02"
 
 # The local file in your current working directory
-# FILE_PATH = "./newspapers/" + sys.argv[1] + "-loc.pdf"
-FILE_PATH = "./newspapers/highdef.jpg"
+FILE_PATH = "./processing/" + sys.argv[1] + "-loc.jpg"
 # Refer to https://cloud.google.com/document-ai/docs/file-types
 # for supported file types
-MIME_TYPE = "application/pdf"
+MIME_TYPE = "image/jpeg"
 
 # Instantiates a client
 docai_client = documentai.DocumentProcessorServiceClient(
@@ -109,6 +161,6 @@ for i in range(len(hocr_string)):
     else:
         hocr_file += hocr_string[i]
 
-with open("./newspapers/" + sys.argv[1] + "-hocr.xml", "w", encoding="utf-8") as file:
+with open("./processing/" + sys.argv[1] + "-hocr.xml", "w", encoding="utf-8") as file:
     file.write(hocr_file)
     file.close()

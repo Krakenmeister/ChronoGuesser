@@ -67,9 +67,7 @@ async function fetchPage(newspaperUrl, pageIndex = -1) {
     console.log(page);
   }
   for (let fileType = 0; fileType < item.data.resources[0].files[page].length; fileType++) {
-    if (item.data.resources[0].files[page][fileType].mimetype == "application/pdf") {
-      info.pdf = item.data.resources[0].files[page][fileType].url;
-    } else if (item.data.resources[0].files[page][fileType].mimetype == "image/jp2") {
+    if (item.data.resources[0].files[page][fileType].mimetype == "image/jp2") {
       info.jp2 = item.data.resources[0].files[page][fileType].url;
     }
   }
@@ -91,9 +89,7 @@ async function fetchInfo(newspaperUrl) {
     };
 
     for (let fileType = 0; fileType < item.data.resources[0].files[page].length; fileType++) {
-      if (item.data.resources[0].files[page][fileType].mimetype == "application/pdf") {
-        pageInfo.pdf = item.data.resources[0].files[page][fileType].url;
-      } else if (item.data.resources[0].files[page][fileType].mimetype == "image/jp2") {
+      if (item.data.resources[0].files[page][fileType].mimetype == "image/jp2") {
         pageInfo.jp2 = item.data.resources[0].files[page][fileType].url;
       }
     }
@@ -133,12 +129,13 @@ async function getRedacted(page) {
   let pdfId = `${page.locId}-${page.date}`;
   console.log("step 0");
 
-  let jp2Promise = downloadFile(page.jp2, path.join(__dirname, "newspapers", `${pdfId}-loc.jp2`));
-  await downloadFile(page.pdf, path.join(__dirname, "newspapers", `${pdfId}-loc.pdf`));
+  await downloadFile(page.jp2, path.join(__dirname, "processing", `${pdfId}-loc.jp2`));
   // let jp2Promise = downloadFile(page.jp2, { directory: path.join(__dirname, "newspapers"), filename: `${reqId}-loc.jp2` });
   // await downloadFile(page.pdf, { directory: path.join(__dirname, "newspapers"), filename: `${reqId}-loc.pdf` });
 
-  let ocrPromise = new Promise((resolve, reject) => {
+  console.log("step 1");
+
+  await new Promise((resolve, reject) => {
     exec(`py -3.9 ocr.py ${pdfId}`, (error, stdout, stderr) => {
       if (error) {
         console.warn(error);
@@ -149,9 +146,7 @@ async function getRedacted(page) {
     });
   });
 
-  await Promise.all([jp2Promise, ocrPromise]);
-
-  console.log("step 1");
+  console.log("step 2");
 
   let redactPromise = new Promise((resolve, reject) => {
     exec(`py -3.9 redact.py ${pdfId}`, (error, stdout, stderr) => {
@@ -166,7 +161,7 @@ async function getRedacted(page) {
 
   await redactPromise;
 
-  console.log("step 2");
+  console.log("step 3");
   return pdfId;
 }
 
@@ -306,11 +301,11 @@ router.post("/play", async (req, res) => {
 
 router.post("/page", async (req, res) => {
   let newspaper = await fetchNewspaper();
-  newspaper = "http://www.loc.gov/item/sn85033699/1869-11-28/ed-1/";
+  // newspaper = "http://www.loc.gov/item/sn85033699/1869-11-28/ed-1/";
   let info = await fetchPage(newspaper, 2);
 
   let reqId = await getRedacted(info);
-  fs.readFile(`./newspapers/${reqId}-redacted.pdf`, (err, data) => {
+  fs.readFile(`./newspapers/${reqId}.pdf`, (err, data) => {
     if (err) {
       res.status(500).send(err);
     }
