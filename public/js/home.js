@@ -1,6 +1,23 @@
+// Settings
+let cutscenes = true;
+let toolbar = true;
+let musicVolume = 0;
+let effectsVolume = 50;
+
+// Global variables
 let currentPaper;
 let guesses;
 
+let mainMenuResizeObserver;
+
+// Main menu assets
+let unfurlFrames;
+let numberFrames;
+let clockFrames;
+let mainBG;
+let mainBGLoading;
+
+// Game assets
 let colonialBG;
 let antebellumBG;
 let victorianBG;
@@ -15,81 +32,435 @@ let ridingFrames;
 let throwingFrames;
 let movingFrames;
 
-function home() {
+let chronoPaper;
+let scoringBG;
+let newsboyWin0;
+let newsboyWin1;
+let newsboyWin2;
+
+const headlines = [
+  ["Newspaper Mix-Up Has Paradoxical Consequences", "New York Times Delivered to Old York Times"],
+  ["New Delivery Service Travels Through Time", "Neither Snow Nor Rain Nor Time of Old"],
+  ["Wonder Boy Helps Americans Around the Clock", "The Meteoric Rise of Chrono News Boy"],
+];
+
+async function home() {
+  let assetPromises = [];
+  if (!mainBG) {
+    assetPromises.push(loadImage(`./img/bg_main.png`));
+    assetPromises.push(loadImage(`./img/bg_main_loading.png`));
+    for (let i = 0; i < 5; i++) {
+      assetPromises.push(loadImage(`./img/animations/unfurl/frame_${i}.png`));
+    }
+    for (let i = 0; i < 4; i++) {
+      assetPromises.push(loadImage(`./img/animations/number_dial/frame_${i}.png`));
+    }
+    for (let i = 0; i < 32; i++) {
+      assetPromises.push(loadImage(`./img/animations/clock_hands/frame_${i}.png`));
+    }
+  }
+
+  await Promise.all(assetPromises).then((assets) => {
+    if (!mainBG) {
+      mainBG = assets[0];
+      mainBGLoading = assets[1];
+      unfurlFrames = assets.slice(2, 7);
+      numberFrames = assets.slice(7, 11);
+      clockFrames = assets.slice(11, 43);
+    }
+  });
+
   document.getElementById("homeWrapper").innerHTML = `
-    <div id="buttonWrapper">
-      <button class="homeButton" id="playButton">Play</button>
-      <button class="homeButton" id="aboutButton">About</button>
+    <div id="canvasWrapper">
+      <canvas id="mainMenuCanvas" width="1920" height="1080" aria-label="Main menu background" role="img"></canvas>
+      <div id="homeTitle"><p>ChronoGuesser</p></div>
+      <div id="playScroll">
+        <div id="playScrollContent">
+          <button class="homeScrollButton" id="playButton">Play</button>
+        </div>
+        <img class="scrollEdge" id="playScrollLeft" src="../img/scroll_left.png" alt="Background scroll">
+        <img class="scrollEdge" id="playScrollRight" src="../img/scroll_right.png" alt="Background scroll">
+      </div>
+      <div id="settingsScroll">
+        <div id="settingsScrollContent">
+          <button class="homeScrollButton" id="settingsButton">Settings</button>
+        </div>
+        <img class="scrollEdge" id="settingsScrollLeft" src="../img/scroll_left.png" alt="Background scroll">
+        <img class="scrollEdge" id="settingsScrollRight" src="../img/scroll_right.png" alt="Background scroll">
+      </div>
     </div>
   `;
 
+  resizeText();
+  mainMenuResizeObserver = new ResizeObserver(resizeText);
+  mainMenuResizeObserver.observe(document.getElementById("canvasWrapper"));
+
+  let ctx = document.getElementById("mainMenuCanvas").getContext("2d");
+  ctx.drawImage(mainBG, 0, 0, 1920, 1080);
+  ctx.drawImage(clockFrames[0], 0, 0, 1920, 1080);
+  ctx.drawImage(unfurlFrames[0], 0, 0, 1920, 1080);
+
   document.getElementById("playButton").addEventListener("click", () => {
+    scrollSound.currentTime = 0;
+    scrollSound.play();
     play();
   });
-  document.getElementById("aboutButton").addEventListener("click", () => {
-    about();
+  document.getElementById("settingsButton").addEventListener("click", () => {
+    scrollSound.currentTime = 0;
+    scrollSound.play();
+    settings();
   });
 }
 
-function about() {
-  document.getElementById("homeWrapper").innerHTML = `
-    <div id="aboutWrapper">
-      <p id="aboutText">
-        Hello
-      </p>
-      <button class="homeButton" id="homeButton">Back</button>
+async function settings() {
+  transitionSettingsButton(1);
+
+  if (document.getElementById("homeTitle")) {
+    document.getElementById("homeTitle").remove();
+  } else {
+    transitionPlayButton(0);
+    let ctx = document.getElementById("mainMenuCanvas").getContext("2d");
+    for (let i = 4; i >= 0; i--) {
+      ctx.drawImage(mainBG, 0, 0, 1920, 1080);
+      ctx.drawImage(clockFrames[0], 0, 0, 1920, 1080);
+      ctx.drawImage(unfurlFrames[i], 0, 0, 1920, 1080);
+      if (i == 0) {
+        document.getElementById("playWrapper").style.visibility = "hidden";
+      } else if (i == 1) {
+        document.getElementById("playWrapper").style.transform = `translateY(60%)`;
+        document.getElementById("playWrapper").style.clipPath = `inset(0 0 90% 0)`;
+        document.getElementById("playWrapper").style.visibility = "visible";
+      } else {
+        document.getElementById("playWrapper").style.transform = `translateY(${10 * (4 - i)}%)`;
+        document.getElementById("playWrapper").style.clipPath = `inset(0 0 ${20 * (4 - i)}% 0)`;
+        document.getElementById("playWrapper").style.visibility = "visible";
+      }
+      await delay(75);
+    }
+    document.getElementById("playWrapper").remove();
+  }
+
+  let settingsWrapper = document.createElement("div");
+  settingsWrapper.id = "settingsWrapper";
+  settingsWrapper.innerHTML = `
+    <div id="optionsWrapper">
+      <div class="optionWrapperRow">
+        <label for="cutscenes">Cutscenes:</label>
+        <input type="checkbox" id="cutscenes" name="cutscenes" checked />
+      </div>
+      <div class="optionWrapperRow">
+        <label for="toolbar">PDF Toolbar:</label>
+        <input type="checkbox" id="toolbar" name="toolbar" checked />
+      </div>
+      <div class="optionWrapper">
+        <label for="musicVolume">Music Volume:</label>
+        <input type="range" id="musicVolume" name="musicVolume" min="0" max="100" value="0" />
+      </div>
+      <div class="optionWrapper">
+        <label for="effectsVolume">Effects Volume:</label>
+        <input type="range" id="effectsVolume" name="effectsVolume" min="0" max="100" value="50" />
+      </div>
     </div>
   `;
+  document.getElementById("canvasWrapper").appendChild(settingsWrapper);
+  document.getElementById("cutscenes").checked = cutscenes;
+  document.getElementById("toolbar").checked = toolbar;
+  document.getElementById("musicVolume").value = musicVolume;
+  document.getElementById("effectsVolume").value = effectsVolume;
+  document.getElementById("cutscenes").addEventListener("change", (event) => {
+    if (event.currentTarget.checked) {
+      cutscenes = true;
+    } else {
+      cutscenes = false;
+    }
+  });
+  document.getElementById("toolbar").addEventListener("change", (event) => {
+    if (event.currentTarget.checked) {
+      toolbar = true;
+    } else {
+      toolbar = false;
+    }
+  });
+  document.getElementById("musicVolume").addEventListener("change", (event) => {
+    musicVolume = event.currentTarget.value;
+    menuMusic.volume = musicVolume / 100;
+  });
+  document.getElementById("effectsVolume").addEventListener("change", (event) => {
+    effectsVolume = event.currentTarget.value;
+    scrollSound.volume = effectsVolume / 100;
+    clockSound.volume = effectsVolume / 100;
+    gearSound.volume = effectsVolume / 1000;
+  });
+  resizeText();
 
-  document.getElementById("homeButton").addEventListener("click", () => {
-    home();
+  let ctx = document.getElementById("mainMenuCanvas").getContext("2d");
+  for (let i = 0; i < 5; i++) {
+    ctx.drawImage(mainBG, 0, 0, 1920, 1080);
+    ctx.drawImage(clockFrames[0], 0, 0, 1920, 1080);
+    ctx.drawImage(unfurlFrames[i], 0, 0, 1920, 1080);
+    if (i == 0) {
+      document.getElementById("settingsWrapper").style.visibility = "hidden";
+    } else if (i == 1) {
+      document.getElementById("settingsWrapper").style.transform = `translateY(60%)`;
+      document.getElementById("settingsWrapper").style.clipPath = `inset(0 0 90% 0)`;
+      document.getElementById("settingsWrapper").style.visibility = "visible";
+    } else {
+      document.getElementById("settingsWrapper").style.transform = `translateY(${10 * (4 - i)}%)`;
+      document.getElementById("settingsWrapper").style.clipPath = `inset(0 0 ${20 * (4 - i)}% 0)`;
+      document.getElementById("settingsWrapper").style.visibility = "visible";
+    }
+    await delay(75);
+  }
+  settingsWrapper.style.clipPath = "";
+}
+
+async function transitionSettingsButton(direction) {
+  document.getElementById("settingsScrollContent").style.animation = "revealBody 0.2s ease-in reverse forwards";
+  document.getElementById("settingsScrollLeft").style.animation = "unfurlHomeLeft 0.2s ease-in reverse forwards";
+  document.getElementById("settingsScrollRight").style.animation = "unfurlHomeRight 0.2s ease-in reverse forwards";
+  await delay(200);
+  document.getElementById("settingsScrollContent").style.animation = "";
+  document.getElementById("settingsScrollLeft").style.animation = "";
+  document.getElementById("settingsScrollRight").style.animation = "";
+
+  let oldButton = document.getElementById("settingsButton");
+  let newButton = oldButton.cloneNode(true);
+  oldButton.parentNode.replaceChild(newButton, oldButton);
+  if (direction == 1) {
+    newButton.textContent = "Back";
+    newButton.addEventListener("click", async () => {
+      scrollSound.currentTime = 0;
+      scrollSound.play();
+      transitionSettingsButton(0);
+      let ctx = document.getElementById("mainMenuCanvas").getContext("2d");
+      for (let i = 4; i >= 0; i--) {
+        ctx.drawImage(mainBG, 0, 0, 1920, 1080);
+        ctx.drawImage(clockFrames[0], 0, 0, 1920, 1080);
+        ctx.drawImage(unfurlFrames[i], 0, 0, 1920, 1080);
+        if (i == 0) {
+          document.getElementById("settingsWrapper").style.visibility = "hidden";
+        } else if (i == 1) {
+          document.getElementById("settingsWrapper").style.transform = `translateY(60%)`;
+          document.getElementById("settingsWrapper").style.clipPath = `inset(0 0 90% 0)`;
+          document.getElementById("settingsWrapper").style.visibility = "visible";
+        } else {
+          document.getElementById("settingsWrapper").style.transform = `translateY(${10 * (4 - i)}%)`;
+          document.getElementById("settingsWrapper").style.clipPath = `inset(0 0 ${20 * (4 - i)}% 0)`;
+          document.getElementById("settingsWrapper").style.visibility = "visible";
+        }
+        await delay(75);
+      }
+      home();
+    });
+  } else {
+    newButton.textContent = "Settings";
+    newButton.addEventListener("click", () => {
+      scrollSound.currentTime = 0;
+      scrollSound.play();
+      settings();
+    });
+  }
+
+  document.getElementById("settingsScrollContent").style.animation = "revealBody 0.2s ease-out";
+  document.getElementById("settingsScrollLeft").style.animation = "unfurlHomeLeft 0.2s ease-out";
+  document.getElementById("settingsScrollRight").style.animation = "unfurlHomeRight 0.2s ease-out";
+  await delay(200);
+  document.getElementById("settingsScrollContent").style.animation = "";
+  document.getElementById("settingsScrollLeft").style.animation = "";
+  document.getElementById("settingsScrollRight").style.animation = "";
+}
+
+async function transitionPlayButton(direction) {
+  document.getElementById("playScrollContent").style.animation = "revealBody 0.2s ease-in reverse forwards";
+  document.getElementById("playScrollLeft").style.animation = "unfurlHomeLeft 0.2s ease-in reverse forwards";
+  document.getElementById("playScrollRight").style.animation = "unfurlHomeRight 0.2s ease-in reverse forwards";
+  await delay(200);
+  document.getElementById("playScrollContent").style.animation = "";
+  document.getElementById("playScrollLeft").style.animation = "";
+  document.getElementById("playScrollRight").style.animation = "";
+
+  let oldButton = document.getElementById("playButton");
+  let newButton = oldButton.cloneNode(true);
+  oldButton.parentNode.replaceChild(newButton, oldButton);
+  if (direction == 1) {
+    newButton.textContent = "Back";
+    newButton.addEventListener("click", async () => {
+      scrollSound.currentTime = 0;
+      scrollSound.play();
+      transitionPlayButton(0);
+      let ctx = document.getElementById("mainMenuCanvas").getContext("2d");
+      for (let i = 4; i >= 0; i--) {
+        ctx.drawImage(mainBG, 0, 0, 1920, 1080);
+        ctx.drawImage(clockFrames[0], 0, 0, 1920, 1080);
+        ctx.drawImage(unfurlFrames[i], 0, 0, 1920, 1080);
+        if (i == 0) {
+          document.getElementById("playWrapper").style.visibility = "hidden";
+        } else if (i == 1) {
+          document.getElementById("playWrapper").style.transform = `translateY(60%)`;
+          document.getElementById("playWrapper").style.clipPath = `inset(0 0 90% 0)`;
+          document.getElementById("playWrapper").style.visibility = "visible";
+        } else {
+          document.getElementById("playWrapper").style.transform = `translateY(${10 * (4 - i)}%)`;
+          document.getElementById("playWrapper").style.clipPath = `inset(0 0 ${20 * (4 - i)}% 0)`;
+          document.getElementById("playWrapper").style.visibility = "visible";
+        }
+        await delay(75);
+      }
+      home();
+    });
+  } else {
+    newButton.textContent = "Play";
+    newButton.addEventListener("click", () => {
+      scrollSound.currentTime = 0;
+      scrollSound.play();
+      play();
+    });
+  }
+
+  document.getElementById("playScrollContent").style.animation = "revealBody 0.2s ease-out";
+  document.getElementById("playScrollLeft").style.animation = "unfurlHomeLeft 0.2s ease-out";
+  document.getElementById("playScrollRight").style.animation = "unfurlHomeRight 0.2s ease-out";
+  await delay(200);
+  document.getElementById("playScrollContent").style.animation = "";
+  document.getElementById("playScrollLeft").style.animation = "";
+  document.getElementById("playScrollRight").style.animation = "";
+}
+
+async function play() {
+  transitionPlayButton(1);
+
+  if (document.getElementById("homeTitle")) {
+    document.getElementById("homeTitle").remove();
+  } else {
+    transitionSettingsButton(0);
+    let ctx = document.getElementById("mainMenuCanvas").getContext("2d");
+    for (let i = 4; i >= 0; i--) {
+      ctx.drawImage(mainBG, 0, 0, 1920, 1080);
+      ctx.drawImage(clockFrames[0], 0, 0, 1920, 1080);
+      ctx.drawImage(unfurlFrames[i], 0, 0, 1920, 1080);
+      if (i == 0) {
+        document.getElementById("settingsWrapper").style.visibility = "hidden";
+      } else if (i == 1) {
+        document.getElementById("settingsWrapper").style.transform = `translateY(60%)`;
+        document.getElementById("settingsWrapper").style.clipPath = `inset(0 0 90% 0)`;
+        document.getElementById("settingsWrapper").style.visibility = "visible";
+      } else {
+        document.getElementById("settingsWrapper").style.transform = `translateY(${10 * (4 - i)}%)`;
+        document.getElementById("settingsWrapper").style.clipPath = `inset(0 0 ${20 * (4 - i)}% 0)`;
+        document.getElementById("settingsWrapper").style.visibility = "visible";
+      }
+      await delay(75);
+    }
+    document.getElementById("settingsWrapper").remove();
+  }
+
+  let playWrapper = document.createElement("div");
+  playWrapper.id = "playWrapper";
+  playWrapper.innerHTML = `
+    <div id="optionsWrapper">
+      <div class="optionWrapper">
+        <label for="numPapers">Number of Papers:</label>
+        <input type="number" id="numPapers" name="numPapers" min="1" max="10" value="5">
+      </div>
+      <div class="optionWrapper">
+        <label for="timeLimit">Time Limit:</label>
+        <select id="timeLimit" name="timeLimit">
+          <option value="0">None</option>
+          <option value="60">1 Minute</option>
+          <option value="300">5 Minutes</option>
+          <option value="600">10 Minutes</option>
+          <option value="1200">20 Minutes</option>
+        </select>
+      </div>
+    </div>
+    <button class="formButton" id="startGameButton">Play</button>
+  `;
+  document.getElementById("canvasWrapper").appendChild(playWrapper);
+  resizeText();
+
+  let ctx = document.getElementById("mainMenuCanvas").getContext("2d");
+  for (let i = 0; i < 5; i++) {
+    ctx.drawImage(mainBG, 0, 0, 1920, 1080);
+    ctx.drawImage(clockFrames[0], 0, 0, 1920, 1080);
+    ctx.drawImage(unfurlFrames[i], 0, 0, 1920, 1080);
+    if (i == 0) {
+      document.getElementById("playWrapper").style.visibility = "hidden";
+    } else if (i == 1) {
+      document.getElementById("playWrapper").style.transform = `translateY(60%)`;
+      document.getElementById("playWrapper").style.clipPath = `inset(0 0 90% 0)`;
+      document.getElementById("playWrapper").style.visibility = "visible";
+    } else {
+      document.getElementById("playWrapper").style.transform = `translateY(${10 * (4 - i)}%)`;
+      document.getElementById("playWrapper").style.clipPath = `inset(0 0 ${20 * (4 - i)}% 0)`;
+      document.getElementById("playWrapper").style.visibility = "visible";
+    }
+    await delay(75);
+  }
+  playWrapper.style.clipPath = "";
+
+  document.getElementById("startGameButton").addEventListener("click", async () => {
+    mainMenuResizeObserver.disconnect();
+    let ctx = document.getElementById("mainMenuCanvas").getContext("2d");
+    for (let i = 4; i >= 0; i--) {
+      ctx.drawImage(mainBG, 0, 0, 1920, 1080);
+      ctx.drawImage(clockFrames[0], 0, 0, 1920, 1080);
+      ctx.drawImage(unfurlFrames[i], 0, 0, 1920, 1080);
+      if (i == 0) {
+        document.getElementById("playWrapper").style.visibility = "hidden";
+      } else if (i == 1) {
+        document.getElementById("playWrapper").style.transform = `translateY(60%)`;
+        document.getElementById("playWrapper").style.clipPath = `inset(0 0 90% 0)`;
+        document.getElementById("playWrapper").style.visibility = "visible";
+      } else {
+        document.getElementById("playWrapper").style.transform = `translateY(${10 * (4 - i)}%)`;
+        document.getElementById("playWrapper").style.clipPath = `inset(0 0 ${20 * (4 - i)}% 0)`;
+        document.getElementById("playWrapper").style.visibility = "visible";
+      }
+      await delay(75);
+    }
+    startGame(parseInt(document.getElementById("numPapers").value), parseInt(document.getElementById("timeLimit").value));
   });
 }
 
-function play() {
-  document.getElementById("homeWrapper").innerHTML = `
-    <div id="playWrapper">
-      <div id="optionsWrapper">
-        <div class="optionWrapper">
-          <label for="numPapers">Number of Papers:</label>
-          <input type="number" id="numPapers" name="numPapers" min="1" max="10" value="5">
-        </div>
-        <div class="optionWrapper">
-          <label for="timeLimit">Time Limit:</label>
-          <select id="timeLimit" name="timeLimit">
-            <option value="0">None</option>
-            <option value="60">1 Minute</option>
-            <option value="300">5 Minutes</option>
-            <option value="600">10 Minutes</option>
-            <option value="1200">20 Minutes</option>
-          </select>
-        </div>
-      </div>
-      <div id="playButtonsWrapper">
-        <button class="formButton" id="playButton">Play</button>
-        <button class="formButton" id="homeButton">Back</button>
-      </div>
-    </div>
-  `;
+async function playMainLoading() {
+  fadeAudio(menuMusic);
+  clockSound.currentTime = 0;
+  clockSound.play();
+  gearSound.currentTime = 0;
+  gearSound.play();
+  if (!document.getElementById("mainMenuCanvas")) {
+    return;
+  }
 
-  document.getElementById("playButton").addEventListener("click", () => {
-    startGame(document.getElementById("numPapers").value, document.getElementById("timeLimit").value);
-  });
-
-  document.getElementById("homeButton").addEventListener("click", () => {
-    home();
-  });
+  let ctx = document.getElementById("mainMenuCanvas").getContext("2d");
+  let clockFrame = 0;
+  let numberFrame = 0;
+  let loadingAnimation = setInterval(() => {
+    ctx.drawImage(mainBGLoading, 0, 0, 1920, 1080);
+    ctx.drawImage(clockFrames[clockFrame], 0, 0, 1920, 1080);
+    ctx.drawImage(numberFrames[numberFrame], 0, 0, 1920, 1080);
+    clockFrame = (clockFrame + 1) % 32;
+    numberFrame = (numberFrame + 1) % 4;
+  }, 35);
 }
 
 async function startGame(numPapers, timeLimit) {
-  document.getElementById("homeWrapper").innerHTML = `
-    <div id="loadingScreen">
-      THIS IS A LOADING SCREEN!
-    </div>
-    <div id="pdfWrapper" style="display:none">
-      <button id="guessButton">Deliver</button>
+  if (document.getElementById("playWrapper")) {
+    document.getElementById("playWrapper").remove();
+  }
+
+  let pdfWrapper = document.createElement("div");
+  pdfWrapper.id = "pdfWrapper";
+  pdfWrapper.style.display = "none";
+  pdfWrapper.innerHTML = `
+    <div id="pdfControlWrapper">
+      <button class="pdfControlButton" id="guessButton">Deliver</button>
+      <button class="pdfControlButton" id="guessSettingsButton">Settings</button>
     </div>
   `;
+  document.getElementById("homeWrapper").appendChild(pdfWrapper);
+
+  playMainLoading();
 
   let assetPromises = [];
   assetPromises.push(axios.post("/play", { numPapers: numPapers, timeLimit: timeLimit }));
@@ -119,6 +490,11 @@ async function startGame(numPapers, timeLimit) {
     for (let i = 0; i < 14; i++) {
       assetPromises.push(loadImage(`./img/animations/moving/frame_${i}.png`));
     }
+    assetPromises.push(loadImage(`./img/chronopaper.png`));
+    assetPromises.push(loadImage(`./img/bg_scoring.png`));
+    assetPromises.push(loadImage(`./img/newsboy_win_0.png`));
+    assetPromises.push(loadImage(`./img/newsboy_win_1.png`));
+    assetPromises.push(loadImage(`./img/newsboy_win_2.png`));
   }
 
   let documents;
@@ -136,6 +512,11 @@ async function startGame(numPapers, timeLimit) {
       ridingFrames = assets.slice(157, 173);
       throwingFrames = assets.slice(173, 205);
       movingFrames = assets.slice(205, 219);
+      chronoPaper = assets[219];
+      scoringBG = assets[220];
+      newsboyWin0 = assets[221];
+      newsboyWin1 = assets[222];
+      newsboyWin2 = assets[223];
     }
   });
 
@@ -153,14 +534,122 @@ async function startGame(numPapers, timeLimit) {
     loadPdf(blobUrls[i], i);
   }
 
+  for (let child of document.getElementById("homeWrapper").children) {
+    if (child.id != pdfWrapper) {
+      child.remove();
+    }
+  }
+
+  clockSound.currentTime = 0;
+  clockSound.pause();
+  gearSound.currentTime = 0;
+  gearSound.pause();
+
   currentPaper = 0;
   guesses = [];
-  document.getElementById("loadingScreen").remove();
   document.getElementById("pdfWrapper").style.display = "block";
   document.getElementById(`newspaper${currentPaper}`).style.visibility = "visible";
   document.getElementById("guessButton").focus();
 
+  document.getElementById("guessSettingsButton").addEventListener("click", async () => {
+    scrollSound.currentTime = 0;
+    scrollSound.play();
+    let oldToolbar = toolbar;
+    let guesSettingsWrapper = document.createElement("div");
+    guesSettingsWrapper.id = "guessSettingsWrapper";
+    guesSettingsWrapper.innerHTML = `
+      <div id="settingsBox">
+        <div id="settingsContent">
+          <div id="optionsWrapper">
+            <div class="optionWrapperRow">
+              <label for="cutscenes">Cutscenes:</label>
+              <input type="checkbox" id="cutscenes" name="cutscenes" checked />
+            </div>
+            <div class="optionWrapperRow">
+              <label for="toolbar">PDF Toolbar:</label>
+              <input type="checkbox" id="toolbar" name="toolbar" checked />
+            </div>
+            <div class="optionWrapper">
+              <label for="musicVolume">Music Volume:</label>
+              <input type="range" id="musicVolume" name="musicVolume" min="0" max="100" value="0" />
+            </div>
+            <div class="optionWrapper">
+              <label for="effectsVolume">Effects Volume:</label>
+              <input type="range" id="effectsVolume" name="effectsVolume" min="0" max="100" value="50" />
+            </div>
+          </div>
+          <button id="doneSettingsButton">Save</button>
+        </div>
+        <img class="scrollEdge" id="scrollLeft" src="../img/scroll_left.png" alt="Background scroll">
+        <img class="scrollEdge" id="scrollRight" src="../img/scroll_right.png" alt="Background scroll">
+      </div>
+    `;
+
+    document.getElementById("pdfWrapper").appendChild(guesSettingsWrapper);
+    document.getElementById("cutscenes").checked = cutscenes;
+    document.getElementById("toolbar").checked = toolbar;
+    document.getElementById("musicVolume").value = musicVolume;
+    document.getElementById("effectsVolume").value = effectsVolume;
+    document.getElementById("cutscenes").addEventListener("change", (event) => {
+      if (event.currentTarget.checked) {
+        cutscenes = true;
+      } else {
+        cutscenes = false;
+      }
+    });
+    document.getElementById("toolbar").addEventListener("change", (event) => {
+      if (event.currentTarget.checked) {
+        toolbar = true;
+      } else {
+        toolbar = false;
+      }
+    });
+    document.getElementById("musicVolume").addEventListener("change", (event) => {
+      musicVolume = event.currentTarget.value;
+    });
+    document.getElementById("effectsVolume").addEventListener("change", (event) => {
+      effectsVolume = event.currentTarget.value;
+      scrollSound.volume = effectsVolume / 100;
+      clockSound.volume = effectsVolume / 100;
+      gearSound.volume = effectsVolume / 1000;
+    });
+
+    document.getElementById("settingsContent").style.animation = "revealBody 0.7s ease-out";
+    document.getElementById("scrollLeft").style.animation = "unfurlSettingsLeft 0.7s ease-out";
+    document.getElementById("scrollRight").style.animation = "unfurlSettingsRight 0.7s ease-out";
+    await delay(700);
+    document.getElementById("settingsContent").style.animation = "";
+    document.getElementById("scrollLeft").style.animation = "";
+    document.getElementById("scrollRight").style.animation = "";
+    document.getElementById("doneSettingsButton").focus();
+
+    document.getElementById("doneSettingsButton").addEventListener("click", async () => {
+      scrollSound.currentTime = 0;
+      scrollSound.play();
+      document.getElementById("settingsContent").style.animation = "revealBody 0.4s ease-in reverse forwards";
+      document.getElementById("scrollLeft").style.animation = "unfurlSettingsLeft 0.4s ease-in reverse forwards";
+      document.getElementById("scrollRight").style.animation = "unfurlSettingsRight 0.4s ease-in reverse forwards";
+      await delay(400);
+      document.getElementById("guessSettingsWrapper").remove();
+      document.getElementById("guessButton").focus();
+      if (oldToolbar != toolbar) {
+        let newspaperPdfs = document.getElementsByClassName("newspaperPdf");
+        for (let newspaperPdf of newspaperPdfs) {
+          let newPdf = newspaperPdf.cloneNode(true);
+          if (toolbar) {
+            newPdf.src = newPdf.src.substring(0, newPdf.src.length - 10);
+          } else {
+            newPdf.src += "&toolbar=0";
+          }
+          newspaperPdf.parentNode.replaceChild(newPdf, newspaperPdf);
+        }
+      }
+    });
+  });
+
   document.getElementById("guessButton").addEventListener("click", async () => {
+    scrollSound.currentTime = 0;
+    scrollSound.play();
     let guessWrapper = document.createElement("div");
     guessWrapper.id = "guessWrapper";
     guessWrapper.innerHTML = `
@@ -181,13 +670,13 @@ async function startGame(numPapers, timeLimit) {
               </div>
             </div>
             <div id="guessButtons">
-              <canvas id="boyAnimation" width="1920" height="1080"></canvas>
+              <canvas id="boyAnimation" width="1920" height="1080" role="img" aria-label="Newspaper boy animation"></canvas>
               <button id="cancelGuessButton">Cancel</button>
               <button id="submitGuessButton">Deliver</button>
             </div>
           </div>
-          <img id="scrollLeft" src="../img/scroll_left.png">
-          <img id="scrollRight" src="../img/scroll_right.png">
+          <img class="scrollEdge" id="scrollLeft" src="../img/scroll_left.png" alt="Background scroll">
+          <img class="scrollEdge" id="scrollRight" src="../img/scroll_right.png" alt="Background scroll">
         </div>
       `;
 
@@ -205,21 +694,23 @@ async function startGame(numPapers, timeLimit) {
           ctx.clearRect(0, 0, 1920, 1080);
           ctx.drawImage(throwingFrames[animationFrame], 0, 0, 1920, 1080);
           animationFrame = (animationFrame + 1) % 32;
-          if (animationFrame == 0) {
+          if (animationFrame == 0 || !cutscenes) {
             clearInterval(throwingAnimation);
             document.getElementById("guessWrapper").remove();
             document.getElementById(`newspaper${currentPaper}`).style.visibility = "hidden";
             currentPaper++;
 
             let guessYear = parseInt(guesses[guesses.length - 1].year);
-            if (guessYear < 1830) {
-              await playDeliveryAnimation(0);
-            } else if (guessYear < 1870) {
-              await playDeliveryAnimation(1);
-            } else if (guessYear < 1940) {
-              await playDeliveryAnimation(2);
-            } else {
-              await playDeliveryAnimation(3);
+            if (cutscenes) {
+              if (guessYear < 1830) {
+                await playDeliveryAnimation(0);
+              } else if (guessYear < 1870) {
+                await playDeliveryAnimation(1);
+              } else if (guessYear < 1940) {
+                await playDeliveryAnimation(2);
+              } else {
+                await playDeliveryAnimation(3);
+              }
             }
 
             if (currentPaper == numPapers) {
@@ -233,29 +724,100 @@ async function startGame(numPapers, timeLimit) {
                 score += thisScore;
                 scores.push(thisScore);
               }
+
+              if (cutscenes) {
+                await playPaperAnimation();
+              }
+
+              let scorePercent = (score / 1000) * numPapers;
+              let performance;
+              if (scorePercent < 0.5) {
+                performance = 0;
+              } else if (scorePercent < 0.75) {
+                performance = 1;
+              } else {
+                performance = 2;
+              }
+
+              let headline = headlines[performance][Math.floor(Math.random() * headlines[performance].length)];
+
               document.getElementById("homeWrapper").innerHTML = `
                   <div id="scoreWrapper">
-                    <div id="scoreTitle">You scored ${score} out of ${1000 * numPapers}</div>
-                    <div id="papersWrapper"></div>
+                    <div id="scoreTitle">
+                      <p style="margin: 0;">Chrono News</p>
+                    </div>
+                    <img src="../img/scoring_line_hor.png" class="scoringLineHor" alt="Page line divider">
+                    <div id="scoreHeadline"><p style="margin: 0;">${headline}</p></div>
+                    <img src="../img/scoring_line_hor.png" class="scoringLineHor" alt="Page line divider">
+                    <div id="scoreArticles">
+                      <div class="scoreColumn" id="scoreColumn0"></div>
+                      <div class="scoreColumn" id="scoreColumn1"></div>
+                      <div class="scoreColumn" id="scoreColumn2"></div>
+                      <img src="../img/scoring_line_vert.png" class="scoringLineVert" id="line12" alt="Page line divider">
+                      <img src="../img/scoring_line_vert.png" class="scoringLineVert" id="line23" alt="Page line divider">
+                    </div>
+                    <img src="../img/scoring_line_hor.png" class="scoringLineHor" alt="Page line divider">
+                    <div id="scoreEditorial">
+                      <div id="scoreEditorialTitle">
+                        <p style="margin: 0;">Editorial</p>
+                      </div>
+                      <div id="scoreEditorialText">
+                        <p style="margin: 0;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;This newspaper and the accompanying game was brought to you by the United States Library of Congress, as part of the Friends' Choice Civics Video Game Challenge. The game was designed and programmed by John Meo, with art created by Yeng Madayag, and music/sound design by Jaxson Keidser. We hope you enjoyed playing and continue having fun with American newspapers!</p>
+                      </div>
+                    </div>
                     <div id="continueButtons">
-                      <button id="homeButton">Home</button>
-                      <button id="replayButton">Play Again</button>
+                      <button class="scoreButton" id="homeButton">Home</button>
+                      <button class="scoreButton" id="replayButton">Play Again</button>
                     </div>
                   </div>
                 `;
 
+              let articleTexts = [[], [], []];
+
               for (let i = 0; i < numPapers; i++) {
-                document.getElementById("papersWrapper").innerHTML += `
-                    <div class="paperWrapper">
-                      <div class="paperTitle"></div>
-                      <div class="paperDate"></div>
-                      <div class="guessDate"></div>
-                      <div class="paperScore"></div>
-                    </div>
-                  `;
+                let articleElement = document.createElement("div");
+
+                let thisPerformance;
+                if (scores[i] < 500) {
+                  thisPerformance = 0;
+                } else if (scores[i] < 750) {
+                  thisPerformance = 1;
+                } else {
+                  thisPerformance = 2;
+                }
+
+                let deliveredFuture;
+                if (
+                  dateToDecimal(parseInt(documents[i].date.year), parseInt(documents[i].date.month), parseInt(documents[i].date.day)) -
+                    dateToDecimal(parseInt(guesses[i].year), parseInt(guesses[i].month), parseInt(guesses[i].day)) >
+                  0
+                ) {
+                  deliveredFuture = false;
+                } else {
+                  deliveredFuture = true;
+                }
+
+                if (i < 2) {
+                  document.getElementById(`scoreColumn${i % 3}`).appendChild(articleElement);
+                } else {
+                  document.getElementById(`scoreColumn${(i + 1) % 3}`).appendChild(articleElement);
+                }
               }
 
+              // for (let i = 0; i < numPapers; i++) {
+              //   document.getElementById("papersWrapper").innerHTML += `
+              //       <div class="paperWrapper">
+              //         <div class="paperTitle"></div>
+              //         <div class="paperDate"></div>
+              //         <div class="guessDate"></div>
+              //         <div class="paperScore"></div>
+              //       </div>
+              //     `;
+              // }
+
               document.getElementById("homeButton").addEventListener("click", () => {
+                scrollSound.currentTime = 0;
+                scrollSound.play();
                 home();
               });
 
@@ -296,6 +858,8 @@ async function startGame(numPapers, timeLimit) {
     document.getElementById("scrollRight").style.animation = "";
 
     document.getElementById("cancelGuessButton").addEventListener("click", async () => {
+      scrollSound.currentTime = 0;
+      scrollSound.play();
       document.getElementById("guessContent").style.animation = "revealBody 0.4s ease-in reverse forwards";
       document.getElementById("scrollLeft").style.animation = "unfurlLeft 0.4s ease-in reverse forwards";
       document.getElementById("scrollRight").style.animation = "unfurlRight 0.4s ease-in reverse forwards";
@@ -314,8 +878,35 @@ async function startGame(numPapers, timeLimit) {
       document.getElementById("cancelGuessButton").style.visibility = "hidden";
       document.getElementById("submitGuessButton").style.visibility = "hidden";
       startThrowFlag = 0;
+      if (!cutscenes) {
+        startThrowFlag = 10;
+      }
     });
   });
+}
+
+function resizeText() {
+  let scalar = document.getElementById("canvasWrapper").getBoundingClientRect().width * 0.26;
+  if (document.getElementById("homeTitle")) {
+    document.getElementById("homeTitle").style.fontSize = `${scalar / 3}px`;
+  }
+  if (document.getElementById("playWrapper")) {
+    document.getElementById("playWrapper").style.fontSize = `${scalar / 5}px`;
+    document.getElementById("numPapers").style.fontSize = `${scalar / 6}px`;
+    document.getElementById("timeLimit").style.fontSize = `${scalar / 6}px`;
+    document.getElementById("startGameButton").style.fontSize = `${scalar / 4}px`;
+  }
+  if (document.getElementById("settingsWrapper")) {
+    document.getElementById("settingsWrapper").style.fontSize = `${scalar / 5}px`;
+    document.getElementById("cutscenes").style.transform = `scale(${scalar / 150})`;
+    document.getElementById("cutscenes").style.margin = `${scalar / 15}px`;
+    document.getElementById("toolbar").style.transform = `scale(${scalar / 150})`;
+    document.getElementById("toolbar").style.margin = `${scalar / 15}px`;
+    document.getElementById("musicVolume").style.transform = `scale(${scalar / 150})`;
+    document.getElementById("effectsVolume").style.transform = `scale(${scalar / 150})`;
+  }
+  document.getElementById("playButton").style.fontSize = `${scalar / 3.8}px`;
+  document.getElementById("settingsButton").style.fontSize = `${scalar / 3.8}px`;
 }
 
 function loadImage(url) {
@@ -327,13 +918,62 @@ function loadImage(url) {
   });
 }
 
+async function playPaperAnimation() {
+  let chronoPaper = await loadImage(`./img/chronopaper.png`);
+
+  document.getElementById("homeWrapper").style.display = "none";
+
+  let animationWrapper = document.createElement("div");
+  animationWrapper.id = "animationWrapper";
+  animationWrapper.innerHTML = `
+    <canvas id="animationCanvas" width="1920" height="1080" aria-label="Paper loading animation" role="img"></canvas>
+  `;
+
+  document.getElementsByTagName("body")[0].appendChild(animationWrapper);
+  let ctx = document.getElementById("animationCanvas").getContext("2d");
+
+  const canvasWidth = 1920;
+  const canvasHeight = 1080;
+
+  let imageWidth = chronoPaper.width;
+  let imageHeight = chronoPaper.height;
+
+  for (let i = 0; i < 80; i++) {
+    imageWidth = chronoPaper.width * 0.04 * i;
+    imageHeight = chronoPaper.height * 0.04 * i;
+
+    ctx.fillStyle = "black";
+    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+
+    ctx.translate(canvasWidth / 2, canvasHeight / 2);
+    ctx.rotate(0.2 * Math.pow(i, 1.2));
+    ctx.drawImage(chronoPaper, -imageWidth / 2, -imageHeight / 2, imageWidth, imageHeight);
+    ctx.rotate(-0.2 * Math.pow(i, 1.2));
+    ctx.translate(-canvasWidth / 2, -canvasHeight / 2);
+
+    await delay(35);
+  }
+
+  ctx.fillStyle = "black";
+  ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+
+  ctx.translate(canvasWidth / 2, canvasHeight / 2);
+  ctx.drawImage(chronoPaper, -imageWidth / 2, -imageHeight / 2, imageWidth, imageHeight);
+  ctx.translate(-canvasWidth / 2, -canvasHeight / 2);
+
+  await delay(1000);
+
+  document.getElementById("animationWrapper").remove();
+  document.getElementById("homeWrapper").style.display = "flex";
+}
+
 async function playDeliveryAnimation(animationEnum) {
   document.getElementById("homeWrapper").style.display = "none";
 
   let animationWrapper = document.createElement("div");
   animationWrapper.id = "animationWrapper";
   animationWrapper.innerHTML = `
-    <canvas id="animationCanvas" width="1920" height="1080"></canvas>
+    <canvas id="animationCanvas" width="1920" height="1080" aria-label="Delivery animation" role="img"></canvas>
   `;
 
   document.getElementsByTagName("body")[0].appendChild(animationWrapper);
@@ -439,6 +1079,10 @@ function loadPdf(blobUrl, index) {
   newspaperPdf.id = `newspaper${index}`;
   newspaperPdf.style.visibility = "hidden";
 
+  if (!toolbar) {
+    newspaperPdf.src += "&toolbar=0";
+  }
+
   document.getElementById("pdfWrapper").appendChild(newspaperPdf);
 }
 
@@ -458,24 +1102,72 @@ function processPdf(base64String) {
   return blobUrl;
 }
 
+let scrollSound = new Audio("./audio/effect_scroll.mp3");
+
+let clockSound = new Audio("./audio/effect_clock.wav");
+clockSound.addEventListener("ended", () => {
+  clockSound.currentTime = 0;
+  clockSound.play();
+});
+
+let gearSound = new Audio("./audio/effect_gear.mp3");
+gearSound.addEventListener("ended", () => {
+  gearSound.currentTime = 0;
+  gearSound.play();
+});
+
+let menuMusic = new Audio("./audio/music_menu.wav");
+menuMusic.addEventListener("ended", () => {
+  menuMusic.currentTime = 0;
+  menuMusic.play();
+});
+
+async function fadeAudio(audioElement) {
+  let initialVolume = audioElement.volume;
+  for (let i = 100; i >= 0; i--) {
+    audioElement.volume = initialVolume * (i / 100);
+    await delay(10);
+  }
+}
+
+function confirmAudio() {
+  let confirmWrapper = document.createElement("div");
+  confirmWrapper.id = "confirmWrapper";
+  confirmWrapper.innerHTML = `
+    <div id="audioConfirm">
+      <p>Would you like to allow ChronoGuesser to play audio?</p>
+      <div id="confirmButtons">
+        <button class="confirmButton" id="confirmYes">Yes</button>
+        <button class="confirmButton" id="confirmNo">No</button>
+      </div>
+    </div>
+  `;
+
+  document.getElementsByTagName("body")[0].appendChild(confirmWrapper);
+  document.getElementById("confirmYes").focus();
+
+  document.getElementById("confirmYes").addEventListener("click", () => {
+    musicVolume = 50;
+    effectsVolume = 50;
+    menuMusic.volume = 0.5;
+    scrollSound.volume = 0.5;
+    clockSound.volume = 0.5;
+    gearSound.volume = 0.05;
+    menuMusic.play();
+    document.getElementById("confirmWrapper").remove();
+  });
+  document.getElementById("confirmNo").addEventListener("click", () => {
+    musicVolume = 0;
+    effectsVolume = 0;
+    menuMusic.volume = 0;
+    scrollSound.volume = 0;
+    clockSound.volume = 0;
+    gearSound.volume = 0;
+    menuMusic.play();
+    document.getElementById("confirmWrapper").remove();
+  });
+}
+
 home();
 
-// let delivering = false;
-// window.addEventListener("keydown", (event) => {
-//   if (event.key == "Enter") {
-//     if (document.getElementById("cancelGuessButton")) {
-//       if (document.activeElement !== document.getElementById("cancelGuessButton")) {
-//         delivering = true;
-//       }
-//     }
-//   }
-// });
-
-// window.addEventListener("keyup", (event) => {
-//   if (event.key == "Enter") {
-//     if (document.getElementById("submitGuessButton") && delivering) {
-//       document.getElementById("submitGuessButton").click();
-//     }
-//     delivering = false;
-//   }
-// });
+confirmAudio();

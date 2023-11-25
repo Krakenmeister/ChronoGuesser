@@ -1,4 +1,5 @@
 @import url("https://fonts.googleapis.com/css2?family=Romanesco&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&display=swap");
 
 html {
   /*user-select: none;
@@ -28,6 +29,7 @@ body {
   flex-direction: column;
   justify-content: center;
   align-items: center;
+  background-color: black;
 }
 
 #buttonWrapper {
@@ -47,26 +49,56 @@ body {
   margin: 0 5vw;
 }
 
-#aboutWrapper {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
+#guessDay {
+  width: 6rem;
 }
 
-#guessButton {
+#guessMonth {
+  width: 6rem;
+}
+
+#guessYear {
+  width: 10rem;
+}
+
+#pdfControlWrapper {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 5vh;
+  right: 2vw;
+  bottom: 2vh;
+  width: auto;
+  height: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 6;
+}
+
+.pdfControlButton {
+  font-size: 4rem;
+  font-family: "Romanesco", cursive;
+  width: 12rem;
+  height: 7rem;
+  padding: 0.2rem 0;
+  margin: 0.5rem 0;
+  background-color: transparent;
+  background-image: url("../img/scroll_full.png");
+  background-size: 100% 100%;
+  background-position: center;
+  outline: none;
+  border: none;
+}
+
+.pdfControlButton:focus {
+  outline: 3px solid black;
+  outline-offset: -1.5rem;
 }
 
 .newspaperPdf {
   width: 100vw;
-  height: 95vh;
+  height: 100vh;
   position: fixed;
-  top: 5vh;
+  top: 0;
   left: 0;
 }
 
@@ -79,9 +111,34 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  z-index: 7;
+}
+
+#guessSettingsWrapper {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 7;
 }
 
 #guessBox {
+  width: auto;
+  height: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-family: "Romanesco", cursive;
+  position: relative;
+  z-index: 8;
+}
+
+#settingsBox {
   width: auto;
   height: auto;
   display: flex;
@@ -120,12 +177,94 @@ body {
   }
 }
 
+@keyframes unfurlSettingsLeft {
+  0% {
+    left: calc(35% - 2.8rem);
+  }
+  100% {
+    left: -2.8rem;
+  }
+}
+
+@keyframes unfurlSettingsRight {
+  0% {
+    right: calc(35% - 2.8rem);
+  }
+  100% {
+    right: -2.8rem;
+  }
+}
+
+@keyframes unfurlHomeLeft {
+  0% {
+    left: 35%;
+  }
+  100% {
+    left: -10%;
+  }
+}
+
+@keyframes unfurlHomeRight {
+  0% {
+    right: 35%;
+  }
+  100% {
+    right: -10%;
+  }
+}
+
 #guessContent {
   background-image: url("../img/scroll_body.png");
   background-position: center;
   background-size: auto 100%;
   z-index: 8;
   padding: 2rem 4rem;
+}
+
+#settingsContent {
+  background-image: url("../img/scroll_body.png");
+  background-position: center;
+  background-size: auto 100%;
+  z-index: 8;
+  padding: 2rem 15rem;
+  font-size: 3rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+#doneSettingsButton {
+  margin: 0.7rem 0;
+  font-size: 6rem;
+  font-family: "Romanesco", cursive;
+  padding: 0.5rem 1.5rem;
+  cursor: pointer;
+  background-color: transparent;
+  outline: none;
+  border: none;
+}
+
+#doneSettingsButton:focus {
+  outline: 3px solid black;
+}
+
+#musicVolume {
+  transform: scale(2);
+}
+
+#effectsVolume {
+  transform: scale(2);
+}
+
+#toolbar {
+  transform: scale(2);
+  margin: 0 2rem;
+}
+
+#cutscenes {
+  transform: scale(2);
+  margin: 0 2rem;
 }
 
 #scrollLeft {
@@ -135,7 +274,6 @@ body {
   left: -2.8rem;
   top: -20%;
   z-index: 9;
-  pointer-events: none;
 }
 
 #scrollRight {
@@ -145,7 +283,6 @@ body {
   right: -2.8rem;
   top: -20%;
   z-index: 9;
-  pointer-events: none;
 }
 
 #guessInputs {
@@ -188,6 +325,32 @@ body {
   border: none;
 }
 
+#startGameButton {
+  font-family: "Romanesco", cursive;
+  background-color: transparent;
+  outline: none;
+  border: none;
+  padding: 0.25rem 1.5rem;
+  cursor: pointer;
+}
+
+#startGameButton:focus {
+  outline: 3px solid black;
+}
+
+.homeScrollButton {
+  font-family: "Romanesco", cursive;
+  background-color: transparent;
+  outline: none;
+  border: none;
+  padding: 0.25rem 1.5rem;
+  cursor: pointer;
+}
+
+.homeScrollButton:focus {
+  outline: 3px solid black;
+}
+
 #submitGuessButton {
   margin: 0 2rem;
   font-size: 8rem;
@@ -208,18 +371,21 @@ body {
 }
 
 #scoreWrapper {
-  position: fixed;
   top: 0;
   left: 0;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   width: 100vw;
-  height: 100vh;
-  background-image: url("../img/bg_main_no_icon.png");
-  background-position: center;
+  height: auto;
+  background-image: url("../img/bg_scoring.png");
+  background-position: top;
   background-size: cover;
   background-repeat: no-repeat;
+  background-attachment: local;
+  overflow-y: scroll;
+  overflow-x: hidden;
 }
 
 #animationWrapper {
@@ -255,4 +421,298 @@ body {
   100% {
     transform: translateX(40rem);
   }
+}
+
+#mainMenuCanvas {
+  width: 100%;
+  height: 100%;
+}
+
+#canvasWrapper {
+  object-fit: cover;
+  height: 100vh;
+  position: relative;
+  aspect-ratio: 16 / 9;
+}
+
+#homeTitle {
+  position: absolute;
+  top: 68%;
+  bottom: 12%;
+  left: 40%;
+  right: 34%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  font-family: "Romanesco", cursive;
+}
+
+#playScrollContent {
+  background-image: url("../img/scroll_body.png");
+  background-position: center;
+  background-size: auto 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+}
+
+#playScroll {
+  position: absolute;
+  top: 75%;
+  bottom: 7%;
+  left: 5%;
+  right: 75%;
+}
+
+#settingsScrollContent {
+  background-image: url("../img/scroll_body.png");
+  background-position: center;
+  background-size: auto 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
+#settingsScroll {
+  position: absolute;
+  top: 75%;
+  bottom: 7%;
+  left: 75%;
+  right: 5%;
+}
+
+#playScrollLeft {
+  position: absolute;
+  height: 140%;
+  width: auto;
+  left: -10%;
+  top: -20%;
+}
+
+#playScrollRight {
+  position: absolute;
+  height: 140%;
+  width: auto;
+  right: -10%;
+  top: -20%;
+}
+
+#settingsScrollLeft {
+  position: absolute;
+  height: 140%;
+  width: auto;
+  left: -10%;
+  top: -20%;
+}
+
+#settingsScrollRight {
+  position: absolute;
+  height: 140%;
+  width: auto;
+  right: -10%;
+  top: -20%;
+}
+
+.scrollEdge {
+  pointer-events: none;
+}
+
+#playWrapper {
+  position: absolute;
+  top: 25%;
+  bottom: 18%;
+  left: 39%;
+  right: 34%;
+  font-family: "Romanesco", cursive;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+}
+
+#settingsWrapper {
+  position: absolute;
+  top: 25%;
+  bottom: 18%;
+  left: 39%;
+  right: 34%;
+  font-family: "Romanesco", cursive;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+}
+
+.optionWrapper {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 8%;
+}
+
+.optionWrapperRow {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 8%;
+}
+
+#numPapers {
+  font-family: "Romanesco", cursive;
+  text-align: center;
+}
+
+#timeLimit {
+  font-family: "Romanesco", cursive;
+  text-align: center;
+}
+
+input[type="checkbox"] {
+  accent-color: black;
+}
+
+input[type="range"] {
+  accent-color: black;
+}
+
+.scoringLineHor {
+  width: 90vw;
+}
+
+#scoreHeadline {
+  font-family: "Cinzel", serif;
+  font-size: 3.5rem;
+  font-weight: 700;
+  width: 90vw;
+  text-align: center;
+}
+
+#scoreTitle {
+  width: 100vw;
+  text-align: center;
+  font-family: "Romanesco", cursive;
+  margin-top: 8vw;
+  font-size: 12rem;
+}
+
+#scoreArticles {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  font-family: "Times New Roman", Times, serif;
+}
+
+.scoreColumn {
+  flex-grow: 1;
+}
+
+#line12 {
+  position: absolute;
+  top: 0;
+  left: 33.33%;
+  height: 100%;
+}
+
+#line23 {
+  position: absolute;
+  top: 0;
+  right: 33.33%;
+  height: 100%;
+}
+
+#continueButtons {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 4rem;
+}
+
+#scoreEditorial {
+  width: 90vw;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  margin: 2rem 0;
+}
+
+#scoreEditorialTitle {
+  font-family: "Cinzel", serif;
+  font-weight: 700;
+  font-size: 3rem;
+  margin-bottom: 2rem;
+}
+
+#scoreEditorialText {
+  font-family: "Times New Roman", Times, serif;
+  text-align: left;
+  width: 85vw;
+  font-size: 1.5rem;
+}
+
+.scoreButton {
+  margin: 0 15vw;
+  font-size: 6rem;
+  font-family: "Romanesco", cursive;
+  padding: 0.5rem 1.5rem;
+  cursor: pointer;
+  background-color: transparent;
+  outline: none;
+  border: none;
+  text-align: center;
+  width: 20rem;
+}
+
+.scoreButton:focus {
+  outline: 3px solid black;
+}
+
+#confirmWrapper {
+  position: fixed;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 101;
+}
+
+#audioConfirm {
+  background-image: url("../img/scroll_full.png");
+  background-size: 100% 100%;
+  background-position: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 8rem;
+  font-size: 2rem;
+}
+
+#confirmButtons {
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-evenly;
+  align-items: center;
+}
+
+.confirmButton {
+  background-color: transparent;
+  font-size: 2rem;
+  border: none;
+  outline: none;
+}
+
+.confirmButton:focus {
+  outline: 3px solid black;
 }
