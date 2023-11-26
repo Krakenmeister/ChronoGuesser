@@ -274,7 +274,7 @@ router.post("/play", async (req, res) => {
           if (err) {
             console.log(err);
           } else {
-            let fileParts = filenames[i].split("-");
+            let fileParts = filenames[i].replace(".pdf", "").split("-");
             pdfData.push({
               pdf: new Buffer.from(data).toString("base64"),
               locId: fileParts[0],

@@ -10,6 +10,10 @@ let guesses;
 
 let mainMenuResizeObserver;
 
+let timerStart;
+let pauseStart = -1;
+let timerInterval;
+
 // Main menu assets
 let unfurlFrames;
 let numberFrames;
@@ -184,12 +188,23 @@ async function settings() {
   document.getElementById("musicVolume").addEventListener("change", (event) => {
     musicVolume = event.currentTarget.value;
     menuMusic.volume = musicVolume / 100;
+    gameMusic.volume = musicVolume / 100;
+    scoringMusic.volume = musicVolume / 100;
   });
   document.getElementById("effectsVolume").addEventListener("change", (event) => {
     effectsVolume = event.currentTarget.value;
     scrollSound.volume = effectsVolume / 100;
     clockSound.volume = effectsVolume / 100;
     gearSound.volume = effectsVolume / 1000;
+    birdSound.volume = (effectsVolume / 100) * 1.5;
+    dogSound.volume = effectsVolume / 100;
+    cricketSound.volume = effectsVolume / 100;
+    trainSound.volume = effectsVolume / 400;
+    doorSound.volume = effectsVolume / 200;
+    newspaperSound.volume = effectsVolume / 100;
+    bicycleSound.volume = effectsVolume / 200;
+    bellSound.volume = effectsVolume / 100;
+    drumSound.volume = effectsVolume / 100;
   });
   resizeText();
 
@@ -418,7 +433,14 @@ async function play() {
       }
       await delay(75);
     }
-    startGame(parseInt(document.getElementById("numPapers").value), parseInt(document.getElementById("timeLimit").value));
+    let numPapers = parseInt(document.getElementById("numPapers").value);
+    if (numPapers < 1) {
+      numPapers = 1;
+    } else if (numPapers > 10) {
+      numPapers = 10;
+    }
+    let timeLimit = parseInt(document.getElementById("timeLimit").value);
+    startGame(numPapers, timeLimit);
   });
 }
 
@@ -444,7 +466,317 @@ async function playMainLoading() {
   }, 35);
 }
 
+function secondsToString(time) {
+  time = Math.floor(time);
+  return `${Math.floor(time / 60)
+    .toString()
+    .padStart(2, "0")}:${(time % 60).toString().padStart(2, "0")}`;
+}
+
 async function startGame(numPapers, timeLimit) {
+  let endGame = async () => {
+    fadeOut(gameMusic);
+
+    let score = 0;
+    let scores = [];
+    for (let i = 0; i < numPapers; i++) {
+      let actualDate = dateToDecimal(parseInt(documents[i].date.year), parseInt(documents[i].date.month), parseInt(documents[i].date.day));
+      let guessedDate = dateToDecimal(parseInt(guesses[i].year), parseInt(guesses[i].month), parseInt(guesses[i].day));
+      let thisScore = calculateScore(guessedDate, actualDate);
+      score += thisScore;
+      scores.push(thisScore);
+    }
+
+    let paperPromises = [];
+    for (let i = 0; i < numPapers; i++) {
+      paperPromises.push(
+        axios.get(
+          `http://www.loc.gov/item/${documents[i].locId}/${documents[i].date.year}-${documents[i].date.month}-${documents[i].date.day}/ed-1/?fo=json&st=pdf`
+        )
+      );
+    }
+
+    if (cutscenes) {
+      paperPromises.push(playPaperAnimation());
+    }
+
+    let newspapersInfo = [];
+    await Promise.all(paperPromises).then((info) => {
+      for (let i = 0; i < numPapers; i++) {
+        newspapersInfo.push({
+          title: capitalize(info[i].data.item.newspaper_title[0]),
+          state: capitalize(info[i].data.item.location_state[0]),
+          city: capitalize(info[i].data.item.location_city[0]),
+          url: `http://www.loc.gov/item/${documents[i].locId}`,
+        });
+      }
+    });
+
+    scoringMusic.currentTime = 0;
+    scoringMusic.play();
+
+    let scorePercent = score / (1000 * numPapers);
+    let performance;
+    if (scorePercent < 0.5) {
+      performance = 0;
+    } else if (scorePercent < 0.75) {
+      performance = 1;
+    } else {
+      performance = 2;
+    }
+
+    let headline = headlines[performance][Math.floor(Math.random() * headlines[performance].length)];
+
+    document.getElementById("homeWrapper").innerHTML = `
+        <div id="scoreWrapper">
+          <div id="scoreTitle">
+            <p style="margin: 0;">Chrono News</p>
+          </div>
+          <img src="../img/scoring_line_hor.png" class="scoringLineHor" alt="Page line divider">
+          <div id="scoreHeadline"><p style="margin: 0;">${headline}</p></div>
+          <img src="../img/scoring_line_hor.png" class="scoringLineHor" alt="Page line divider">
+          <div id="scoreArticles">
+            <div class="scoreColumn" id="scoreColumn0"></div>
+            <div class="scoreColumn" id="scoreColumn1"></div>
+            <div class="scoreColumn" id="scoreColumn2"></div>
+            <img src="../img/scoring_line_vert.png" class="scoringLineVert" id="line12" alt="Page line divider">
+            <img src="../img/scoring_line_vert.png" class="scoringLineVert" id="line23" alt="Page line divider">
+          </div>
+          <img src="../img/scoring_line_hor.png" class="scoringLineHor" alt="Page line divider">
+          <div id="scoreEditorial">
+            <div id="scoreEditorialTitle">
+              <p style="margin: 0;">Editorial</p>
+            </div>
+            <div id="scoreEditorialText">
+              <p style="margin: 0;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;This newspaper and the accompanying game was brought to you by the United States Library of Congress, as part of the Friends' Choice Civics Video Game Challenge. The game was designed and programmed by John Meo with art created by Yeng Madayag and music composed by Jaxson Keidser. We hope you enjoyed playing and continue having fun with American newspapers!</p>
+            </div>
+          </div>
+          <div id="continueButtons">
+            <button class="scoreButton" id="homeButton">Home</button>
+            <button class="scoreButton" id="replayButton">Play Again</button>
+          </div>
+        </div>
+      `;
+
+    const romanNumerals = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"];
+    const familyNames = [
+      ["Robinson", "Robinsons"],
+      ["Smith", "Smiths"],
+      ["Brown", "Browns"],
+      ["Johnson", "Johnsons"],
+      ["Miller", "Millers"],
+      ["Anderson", "Andersons"],
+      ["Thompson", "Thompsons"],
+      ["Garcia", "Garcias"],
+      ["Hernandez", "Hernandezes"],
+      ["Rivera", "Riveras"],
+      ["Carter", "Carters"],
+      ["Reyes", "Reyes"],
+      ["Stewart", "Stewarts"],
+      ["Ortiz", "Ortizes"],
+      ["Cooper", "Coopers"],
+      ["Peterson", "Petersons"],
+      ["Ramos", "Ramoses"],
+      ["Richardson", "Richardsons"],
+      ["Chavez", "Chavezes"],
+      ["Castillo", "Castillos"],
+      ["Patel", "Patels"],
+    ];
+    const titles = ["Mr.", "Mrs.", "Dr."];
+    const descriptionBad = ["strange", "odd", "unusual", "unexpected"];
+    const descriptionDay = ["pleasant", "stormy", "calm", "quiet", "sunny", "lazy", "warm", "cold", "tranquil"];
+    const timeOfDay = ["morning", "evening", "afternoon", "night"];
+    const reactionBad = ["shocked", "horrified", "mortified", "apalled", "furious"];
+    const reactionOkay = ["disappointed", "dismayed", "annoyed", "displeased", "slightly bothered"];
+    const reactionGood = ["pleasantly surprised", "cheerful", "satisfied", "happy", "delighted"];
+    const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    let articleTexts = [
+      [
+        `The FAMILY_PLURAL awoke on the GUESS_DAY of GUESS_MONTH, GUESS_YEAR in NEWSPAPER_CITY, NEWSPAPER_STATE, to a DESCRIPTION_BAD newspaper on their front doorstep.
+        Dated from DOCUMENT_MONTH DOCUMENT_DAY, DOCUMENT_YEAR, PERSON_TITLE FAMILY_NAME was REACTION_BAD to receive the paper. Upon further reading, they found their
+        own obituary! This is a paper that will haunt them forever.`,
+        `PERSON_TITLE FAMILY_NAME opened their daily issue of NEWSPAPER_TITLE on the GUESS_DAY of GUESS_MONTH, GUESS_YEAR. It was quite DESCRIPTION_BAD, since the paper was
+        published on the DOCUMENT_DAY of DOCUMENT_MONTH, DOCUMENT_YEAR. Curious as they rifled through the pages, inside they found inventions of the
+        future and began to frantically recreate them. This will not go down well in the Time Council's monthly meeting.`,
+        `The FAMILY_PLURAL are REACTION_BAD with their newspaper delivery service. They received a newspaper from DOCUMENT_MONTH DOCUMENT_DAY, DOCUMENT_YEAR
+        on the evening of GUESS_MONTH GUESS_DAY, GUESS_YEAR. As a result, all of the information was very old and out of date. They will be looking for other delivery
+        services if this continues.`,
+      ],
+      [
+        `An issue of NEWSPAPER_TITLE was delivered to the FAMILY_PLURAL on GUESS_MONTH GUESS_DAY, GUESS_YEAR in the great city of NEWSPAPER_CITY, NEWSPAPER_STATE. However,
+        the paper was published in DOCUMENT_MONTH DOCUMENT_DAY, DOCUMENT_YEAR, so PERSON_TITLE FAMILY_NAME was REACTION_OKAY to read it. Most of the paper was at least
+        somewhat relevant to them, so business continues as usual.`,
+        `PERSON_TITLE FAMILY_NAME received their issue of NEWSPAPER_TITLE on the GUESS_DAY of GUESS_MONTH, GUESS_YEAR. Although it was delivered to the correct location in NEWSPAPER_CITY, NEWSPAPER_STATE,
+        the publish date of DOCUMENT_MONTH DOCUMENT_DAY, DOCUMENT_YEAR was a bit off. They were REACTION_OKAY to find it on their front porch, but not REACTION_BAD.
+        They didn't read many of the articles, but found the crossword puzzle quite excellent!`,
+        `It was a DESCRIPTION_DAY TIME_OF_DAY on the GUESS_DAY of GUESS_MONTH, GUESS_YEAR in NEWSPAPER_CITY, NEWSPAPER_STATE when PERSON_TITLE FAMILY_NAME saw their daily newspaper flop onto
+        the front yard. They were REACTION_OKAY to find it was actually from DOCUMENT_MONTH DOCUMENT_DAY, DOCUMENT_YEAR, but they were in a great mood and read it
+        the whole way through anyway. They were pleasantly surprised at how much they learned!`,
+      ],
+      [
+        `The FAMILY_PLURAL haven't received their issue of NEWSPAPER_TITLE in weeks and were REACTION_GOOD to find a copy on the morning of GUESS_MONTH GUESS_DAY, GUESS_YEAR.
+        The copy they got was from DOCUMENT_MONTH DOCUMENT_DAY, DOCUMENT_YEAR so it was all good information. After other delivery services having failed them, they will
+        certainly recommend the Chrono News Boy to their friends and neighbors!`,
+        `The Time Council congratulates Chrono News Boy for delivering NEWSPAPER_TITLE to GUESS_MONTH GUESS_DAY, GUESS_YEAR despite some unfortunate ink stains obscuring the date
+        it was published in which was DOCUMENT_MONTH DOCUMENT_DAY, DOCUMENT_YEAR. The whole neighborhood was REACTION_GOOD to find their copies and thank their lucky stars
+        to have such a wonderful delivery service to help them.`,
+        `Chrono News Boy saves the day for the FAMILY_PLURAL! No one local to their time could deliver an issue of NEWSPAPER_TITLE, so our hero delivered it to them on
+        the GUESS_DAY of GUESS_MONTH, GUESS_YEAR. The copy they received was from DOCUMENT_MONTH DOCUMENT_DAY, DOCUMENT_YEAR, so they were REACTION_GOOD. News spreads of this wonder boy
+        as their delivery services are requested more and more.`,
+      ],
+    ];
+
+    let imageCaptions = [
+      `Photograph of Chrono News Boy in action, circa ${Math.floor(Math.random() * 170) + 1790}. Received ${score} out of ${
+        1000 * numPapers
+      } points for their deliveries.`,
+      `Chrono News Boy after a long day of deliveries. Received ${score} out of ${1000 * numPapers} points.`,
+      `Chrono News Boy awarded ${score} out of ${1000 * numPapers} points, receiving special congratulations by the Time Council.`,
+    ];
+
+    let newspaperImageWrapper = document.createElement("div");
+    newspaperImageWrapper.id = "newspaperImageWrapper";
+    newspaperImageWrapper.innerHTML = `
+      <img id="newspaperImage" src="./img/newsboy_win_${performance}.png" alt="Photo of Chrono News Boy posing">
+      <p style="margin: 1rem 0 1.5rem 0;font-size: 1.2rem;font-family: 'Times New Roman', Times, serif;">&nbsp;&nbsp;${imageCaptions[performance]}</p>
+    `;
+
+    document.getElementById("scoreColumn2").appendChild(newspaperImageWrapper);
+
+    let columnCounts = [];
+    for (let i = 0; i < 3; i++) {
+      let columnCount = Math.floor((numPapers + 1) / 3);
+      if (i < (numPapers + 1) % 3) {
+        columnCount++;
+      }
+      columnCounts.push(columnCount);
+    }
+
+    for (let i = 0; i < numPapers; i++) {
+      let articleText;
+
+      let thisPerformance;
+      if (scores[i] < 500) {
+        thisPerformance = 0;
+      } else if (scores[i] < 750) {
+        thisPerformance = 1;
+      } else {
+        thisPerformance = 2;
+      }
+
+      let deliveredFuture;
+      if (
+        dateToDecimal(parseInt(documents[i].date.year), parseInt(documents[i].date.month), parseInt(documents[i].date.day)) -
+          dateToDecimal(parseInt(guesses[i].year), parseInt(guesses[i].month), parseInt(guesses[i].day)) <
+        0
+      ) {
+        deliveredFuture = false;
+      } else {
+        deliveredFuture = true;
+      }
+
+      if (thisPerformance == 0 && !deliveredFuture) {
+        articleText = articleTexts[0][2];
+      } else if (thisPerformance == 0 && deliveredFuture) {
+        articleText = articleTexts[0][Math.floor(Math.random() * 2)];
+      } else {
+        articleText = articleTexts[thisPerformance][Math.floor(Math.random() * articleTexts[thisPerformance].length)];
+      }
+
+      // Replace newspaper info
+      if (parseInt(guesses[i].day) % 10 == 1 && Math.floor(parseInt(guesses[i].day) / 10) != 1) {
+        articleText = articleText.replace("GUESS_DAY", `${parseInt(guesses[i].day)}st`);
+      } else if (parseInt(guesses[i].day) % 10 == 2 && Math.floor(parseInt(guesses[i].day) / 10) != 1) {
+        articleText = articleText.replace("GUESS_DAY", `${parseInt(guesses[i].day)}nd`);
+      } else if (parseInt(guesses[i].day) % 10 == 3 && Math.floor(parseInt(guesses[i].day) / 10) != 1) {
+        articleText = articleText.replace("GUESS_DAY", `${parseInt(guesses[i].day)}rd`);
+      } else {
+        articleText = articleText.replace("GUESS_DAY", `${parseInt(guesses[i].day)}th`);
+      }
+      if (parseInt(documents[i].date.day) % 10 == 1 && Math.floor(parseInt(guesses[i].day) / 10) != 1) {
+        articleText = articleText.replace("DOCUMENT_DAY", `${parseInt(documents[i].date.day)}st`);
+      } else if (parseInt(documents[i].date.day) % 10 == 2 && Math.floor(parseInt(guesses[i].day) / 10) != 1) {
+        articleText = articleText.replace("DOCUMENT_DAY", `${parseInt(documents[i].date.day)}nd`);
+      } else if (parseInt(documents[i].date.day) % 10 == 3 && Math.floor(parseInt(guesses[i].day) / 10) != 1) {
+        articleText = articleText.replace("DOCUMENT_DAY", `${parseInt(documents[i].date.day)}rd`);
+      } else {
+        articleText = articleText.replace("DOCUMENT_DAY", `${parseInt(documents[i].date.day)}th`);
+      }
+      articleText = articleText.replace("GUESS_MONTH", `${monthNames[parseInt(guesses[i].month) - 1]}`);
+      articleText = articleText.replace("GUESS_YEAR", `${parseInt(guesses[i].year)}`);
+      articleText = articleText.replace("DOCUMENT_MONTH", `${monthNames[parseInt(documents[i].date.month) - 1]}`);
+      articleText = articleText.replace("DOCUMENT_YEAR", `${parseInt(documents[i].date.year)}`);
+      articleText = articleText.replace("NEWSPAPER_TITLE", `${newspapersInfo[i].title}`);
+      articleText = articleText.replace("NEWSPAPER_CITY", `${newspapersInfo[i].city}`);
+      articleText = articleText.replace("NEWSPAPER_STATE", `${newspapersInfo[i].state}`);
+
+      // Replace names
+      let familyName = Math.floor(Math.random() * familyNames.length);
+      articleText = articleText.replace("FAMILY_NAME", familyNames[familyName][0]);
+      articleText = articleText.replace("FAMILY_PLURAL", familyNames[familyName][1]);
+      let titleRandom = Math.random();
+      if (titleRandom < 0.475) {
+        articleText = articleText.replace("PERSON_TITLE", `${titles[0]}`);
+      } else if (titleRandom < 0.95) {
+        articleText = articleText.replace("PERSON_TITLE", `${titles[1]}`);
+      } else {
+        articleText = articleText.replace("PERSON_TITLE", `${titles[2]}`);
+      }
+
+      // Replace other descriptors
+      articleText = articleText.replace("REACTION_BAD", `${reactionBad[Math.floor(Math.random() * reactionBad.length)]}`);
+      articleText = articleText.replace("REACTION_OKAY", `${reactionOkay[Math.floor(Math.random() * reactionOkay.length)]}`);
+      articleText = articleText.replace("REACTION_GOOD", `${reactionGood[Math.floor(Math.random() * reactionGood.length)]}`);
+      articleText = articleText.replace("DESCRIPTION_DAY", `${descriptionDay[Math.floor(Math.random() * descriptionDay.length)]}`);
+      articleText = articleText.replace("TIME_OF_DAY", `${timeOfDay[Math.floor(Math.random() * timeOfDay.length)]}`);
+      articleText = articleText.replace("DESCRIPTION_BAD", `${descriptionBad[Math.floor(Math.random() * descriptionBad.length)]}`);
+
+      articleText = `&nbsp;&nbsp;&nbsp;&nbsp;${articleText}`;
+
+      let articleElement = document.createElement("div");
+      articleElement.className = "articleElement";
+      articleElement.innerHTML = `
+        <div class="articleTitle"><p style="margin:0;">Section ${romanNumerals[i]}</p></div>
+        <div class="articleText"><p style="margin:0;">${articleText}</p></div>
+        <div class="articleScore"><p style="margin:0;">${scores[i]} points received</p></div>
+        <a class="articleLink" href="${newspapersInfo[i].url}">Learn more about this paper</a>
+      `;
+
+      let column = i;
+      for (let j = 0; j < columnCounts.length; j++) {
+        column -= columnCounts[j];
+        if (column < 0) {
+          column = j;
+          j = columnCounts.length;
+        }
+      }
+
+      document.getElementById(`scoreColumn${column}`).appendChild(articleElement);
+    }
+
+    if (numPapers == 1) {
+      document.getElementById("scoreColumn1").remove();
+      document.getElementById("line12").remove();
+      document.getElementById("line23").remove();
+    }
+
+    document.getElementById("homeButton").addEventListener("click", () => {
+      fadeAudio(scoringMusic);
+      menuMusic.currentTime = 0;
+      fadeIn(menuMusic);
+      home();
+    });
+
+    document.getElementById("replayButton").addEventListener("click", () => {
+      fadeAudio(scoringMusic);
+      clockSound.currentTime = 0;
+      clockSound.play();
+      gearSound.currentTime = 0;
+      gearSound.play();
+      startGame(numPapers, timeLimit);
+    });
+  };
+
   if (document.getElementById("playWrapper")) {
     document.getElementById("playWrapper").remove();
   }
@@ -545,11 +877,51 @@ async function startGame(numPapers, timeLimit) {
   gearSound.currentTime = 0;
   gearSound.pause();
 
+  if (timeLimit != 0) {
+    let timerScroll = document.createElement("div");
+    timerScroll.id = "timerScroll";
+    timerScroll.role = "timer";
+    timerScroll.ariaLabel = "Time remaining in game";
+    timerScroll.textContent = secondsToString(timeLimit);
+    document.getElementById("pdfControlWrapper").prepend(timerScroll);
+
+    timerStart = Date.now();
+    timerInterval = setInterval(() => {
+      let timeElapsed;
+      if (pauseStart == -1) {
+        timeElapsed = Date.now() - timerStart;
+      } else {
+        timeElapsed = pauseStart - timerStart;
+      }
+      timeElapsed = timeElapsed / 1000;
+      if (timeElapsed > timeLimit) {
+        // End the game
+        clearInterval(timerInterval);
+        while (guesses.length < numPapers) {
+          let currentDate = new Date();
+          guesses.push({
+            year: currentDate.getFullYear(),
+            month: currentDate.getMonth() + 1,
+            day: currentDate.getDate(),
+          });
+        }
+        endGame();
+      } else {
+        if (document.getElementById("timerScroll")) {
+          document.getElementById("timerScroll").textContent = secondsToString(timeLimit - timeElapsed);
+        }
+      }
+    }, 100);
+  }
+
   currentPaper = 0;
   guesses = [];
   document.getElementById("pdfWrapper").style.display = "block";
   document.getElementById(`newspaper${currentPaper}`).style.visibility = "visible";
   document.getElementById("guessButton").focus();
+
+  gameMusic.currentTime = 0;
+  gameMusic.play();
 
   document.getElementById("guessSettingsButton").addEventListener("click", async () => {
     scrollSound.currentTime = 0;
@@ -606,12 +978,24 @@ async function startGame(numPapers, timeLimit) {
     });
     document.getElementById("musicVolume").addEventListener("change", (event) => {
       musicVolume = event.currentTarget.value;
+      menuMusic.volume = musicVolume / 100;
+      gameMusic.volume = musicVolume / 100;
+      scoringMusic.volume = musicVolume / 100;
     });
     document.getElementById("effectsVolume").addEventListener("change", (event) => {
       effectsVolume = event.currentTarget.value;
       scrollSound.volume = effectsVolume / 100;
       clockSound.volume = effectsVolume / 100;
       gearSound.volume = effectsVolume / 1000;
+      birdSound.volume = (effectsVolume / 100) * 1.5;
+      dogSound.volume = effectsVolume / 100;
+      cricketSound.volume = effectsVolume / 100;
+      trainSound.volume = effectsVolume / 400;
+      doorSound.volume = effectsVolume / 200;
+      newspaperSound.volume = effectsVolume / 100;
+      bicycleSound.volume = effectsVolume / 200;
+      bellSound.volume = effectsVolume / 100;
+      drumSound.volume = effectsVolume / 100;
     });
 
     document.getElementById("settingsContent").style.animation = "revealBody 0.7s ease-out";
@@ -713,117 +1097,11 @@ async function startGame(numPapers, timeLimit) {
               }
             }
 
+            timerStart += Date.now() - pauseStart;
+            pauseStart = -1;
+
             if (currentPaper == numPapers) {
-              // End game
-              let score = 0;
-              let scores = [];
-              for (let i = 0; i < numPapers; i++) {
-                let actualDate = dateToDecimal(parseInt(documents[i].date.year), parseInt(documents[i].date.month), parseInt(documents[i].date.day));
-                let guessedDate = dateToDecimal(parseInt(guesses[i].year), parseInt(guesses[i].month), parseInt(guesses[i].day));
-                let thisScore = calculateScore(guessedDate, actualDate);
-                score += thisScore;
-                scores.push(thisScore);
-              }
-
-              if (cutscenes) {
-                await playPaperAnimation();
-              }
-
-              let scorePercent = (score / 1000) * numPapers;
-              let performance;
-              if (scorePercent < 0.5) {
-                performance = 0;
-              } else if (scorePercent < 0.75) {
-                performance = 1;
-              } else {
-                performance = 2;
-              }
-
-              let headline = headlines[performance][Math.floor(Math.random() * headlines[performance].length)];
-
-              document.getElementById("homeWrapper").innerHTML = `
-                  <div id="scoreWrapper">
-                    <div id="scoreTitle">
-                      <p style="margin: 0;">Chrono News</p>
-                    </div>
-                    <img src="../img/scoring_line_hor.png" class="scoringLineHor" alt="Page line divider">
-                    <div id="scoreHeadline"><p style="margin: 0;">${headline}</p></div>
-                    <img src="../img/scoring_line_hor.png" class="scoringLineHor" alt="Page line divider">
-                    <div id="scoreArticles">
-                      <div class="scoreColumn" id="scoreColumn0"></div>
-                      <div class="scoreColumn" id="scoreColumn1"></div>
-                      <div class="scoreColumn" id="scoreColumn2"></div>
-                      <img src="../img/scoring_line_vert.png" class="scoringLineVert" id="line12" alt="Page line divider">
-                      <img src="../img/scoring_line_vert.png" class="scoringLineVert" id="line23" alt="Page line divider">
-                    </div>
-                    <img src="../img/scoring_line_hor.png" class="scoringLineHor" alt="Page line divider">
-                    <div id="scoreEditorial">
-                      <div id="scoreEditorialTitle">
-                        <p style="margin: 0;">Editorial</p>
-                      </div>
-                      <div id="scoreEditorialText">
-                        <p style="margin: 0;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;This newspaper and the accompanying game was brought to you by the United States Library of Congress, as part of the Friends' Choice Civics Video Game Challenge. The game was designed and programmed by John Meo, with art created by Yeng Madayag, and music/sound design by Jaxson Keidser. We hope you enjoyed playing and continue having fun with American newspapers!</p>
-                      </div>
-                    </div>
-                    <div id="continueButtons">
-                      <button class="scoreButton" id="homeButton">Home</button>
-                      <button class="scoreButton" id="replayButton">Play Again</button>
-                    </div>
-                  </div>
-                `;
-
-              let articleTexts = [[], [], []];
-
-              for (let i = 0; i < numPapers; i++) {
-                let articleElement = document.createElement("div");
-
-                let thisPerformance;
-                if (scores[i] < 500) {
-                  thisPerformance = 0;
-                } else if (scores[i] < 750) {
-                  thisPerformance = 1;
-                } else {
-                  thisPerformance = 2;
-                }
-
-                let deliveredFuture;
-                if (
-                  dateToDecimal(parseInt(documents[i].date.year), parseInt(documents[i].date.month), parseInt(documents[i].date.day)) -
-                    dateToDecimal(parseInt(guesses[i].year), parseInt(guesses[i].month), parseInt(guesses[i].day)) >
-                  0
-                ) {
-                  deliveredFuture = false;
-                } else {
-                  deliveredFuture = true;
-                }
-
-                if (i < 2) {
-                  document.getElementById(`scoreColumn${i % 3}`).appendChild(articleElement);
-                } else {
-                  document.getElementById(`scoreColumn${(i + 1) % 3}`).appendChild(articleElement);
-                }
-              }
-
-              // for (let i = 0; i < numPapers; i++) {
-              //   document.getElementById("papersWrapper").innerHTML += `
-              //       <div class="paperWrapper">
-              //         <div class="paperTitle"></div>
-              //         <div class="paperDate"></div>
-              //         <div class="guessDate"></div>
-              //         <div class="paperScore"></div>
-              //       </div>
-              //     `;
-              // }
-
-              document.getElementById("homeButton").addEventListener("click", () => {
-                scrollSound.currentTime = 0;
-                scrollSound.play();
-                home();
-              });
-
-              document.getElementById("replayButton").addEventListener("click", () => {
-                startGame(numPapers, timeLimit);
-              });
+              endGame();
             } else {
               document.getElementById(`newspaper${currentPaper}`).style.visibility = "visible";
               document.getElementById("guessButton").focus();
@@ -838,6 +1116,9 @@ async function startGame(numPapers, timeLimit) {
           startThrowFlag++;
         }
         if (startThrowFlag > 0) {
+          if (animationFrame >= 14) {
+            animationFrame = animationFrame % 14;
+          }
           ctx.clearRect(0, 0, 1920, 1080);
           ctx.drawImage(movingFrames[animationFrame], 0, 0, 1920, 1080);
           animationFrame = (animationFrame + 1) % 14;
@@ -878,8 +1159,15 @@ async function startGame(numPapers, timeLimit) {
       document.getElementById("cancelGuessButton").style.visibility = "hidden";
       document.getElementById("submitGuessButton").style.visibility = "hidden";
       startThrowFlag = 0;
+      pauseStart = Date.now();
       if (!cutscenes) {
         startThrowFlag = 10;
+      } else {
+        bellSound.currentTime = 0;
+        bellSound.play();
+        bicycleSound.currentTime = 0;
+        bicycleSound.play();
+        fadeOut(gameMusic);
       }
     });
   });
@@ -928,6 +1216,9 @@ async function playPaperAnimation() {
   animationWrapper.innerHTML = `
     <canvas id="animationCanvas" width="1920" height="1080" aria-label="Paper loading animation" role="img"></canvas>
   `;
+
+  drumSound.currentTime = 0;
+  drumSound.play();
 
   document.getElementsByTagName("body")[0].appendChild(animationWrapper);
   let ctx = document.getElementById("animationCanvas").getContext("2d");
@@ -985,20 +1276,33 @@ async function playDeliveryAnimation(animationEnum) {
     case 0:
       frames = colonialFrames;
       bg = colonialBG;
+      birdSound.currentTime = 0;
+      birdSound.play();
       break;
     case 1:
       frames = antebellumFrames;
       bg = antebellumBG;
+      cricketSound.currentTime = 0;
+      cricketSound.play();
       break;
     case 2:
       frames = victorianFrames;
       bg = victorianBG;
+      trainSound.currentTime = 0;
+      trainSound.play();
       break;
     case 3:
       frames = suburbanFrames;
       bg = suburbanBG;
+      dogSound.currentTime = 0;
+      dogSound.play();
       break;
   }
+
+  doorSound.currentTime = 0;
+  doorSound.play();
+  newspaperSound.currentTime = 0;
+  newspaperSound.play();
 
   ctx.drawImage(bg, 0, 0, 1920, 1080);
   ctx.drawImage(frames[0], 0, 0, 1920, 1080);
@@ -1011,6 +1315,13 @@ async function playDeliveryAnimation(animationEnum) {
   }
 
   await delay(500);
+
+  fadeAudio(birdSound);
+  fadeAudio(dogSound);
+  fadeAudio(cricketSound);
+  fadeAudio(trainSound);
+  fadeAudio(bicycleSound);
+  fadeIn(gameMusic);
 
   document.getElementById("animationWrapper").remove();
   document.getElementById("homeWrapper").style.display = "flex";
@@ -1050,6 +1361,25 @@ function isLeapYear(year) {
     }
   }
   return isLeapYear;
+}
+
+function capitalize(name) {
+  let capitalized = "";
+  for (let i = 0; i < name.length; i++) {
+    if (i == 0) {
+      capitalized += name[i].toUpperCase();
+    } else {
+      if (name[i - 1] == " " || name[i - 1] == "-") {
+        capitalized += name[i].toUpperCase();
+      } else {
+        capitalized += name[i].toLowerCase();
+      }
+    }
+  }
+  if (capitalized[capitalized.length - 1] == ".") {
+    capitalized = capitalized.substring(0, capitalized.length - 1);
+  }
+  return capitalized;
 }
 
 function dateToDecimal(year, month, day) {
@@ -1103,6 +1433,15 @@ function processPdf(base64String) {
 }
 
 let scrollSound = new Audio("./audio/effect_scroll.mp3");
+let birdSound = new Audio("./audio/effect_birds.mp3");
+let dogSound = new Audio("./audio/effect_dog.wav");
+let cricketSound = new Audio("./audio/effect_crickets.wav");
+let trainSound = new Audio("./audio/effect_train.wav");
+let doorSound = new Audio("./audio/effect_door.wav");
+let newspaperSound = new Audio("./audio/effect_newspaper.wav");
+let bicycleSound = new Audio("./audio/effect_bicycle.wav");
+let bellSound = new Audio("./audio/effect_bell.wav");
+let drumSound = new Audio("./audio/effect_drums.wav");
 
 let clockSound = new Audio("./audio/effect_clock.wav");
 clockSound.addEventListener("ended", () => {
@@ -1122,12 +1461,43 @@ menuMusic.addEventListener("ended", () => {
   menuMusic.play();
 });
 
+let gameMusic = new Audio("./audio/music_game.wav");
+gameMusic.addEventListener("ended", () => {
+  gameMusic.currentTime = 0;
+  gameMusic.play();
+});
+
+let scoringMusic = new Audio("./audio/music_scoring.wav");
+
+async function fadeOut(audioElement) {
+  let initialVolume = audioElement.volume;
+  for (let i = 100; i >= 0; i--) {
+    audioElement.volume = initialVolume * (i / 100);
+    await delay(5);
+  }
+  audioElement.pause();
+  audioElement.volume = initialVolume;
+}
+
+async function fadeIn(audioElement) {
+  let targetVolume = audioElement.volume;
+  audioElement.volume = 0;
+  audioElement.play();
+  for (let i = 0; i <= 100; i++) {
+    audioElement.volume = targetVolume * (i / 100) * (i / 100) * (i / 100);
+    await delay(10);
+  }
+}
+
 async function fadeAudio(audioElement) {
   let initialVolume = audioElement.volume;
   for (let i = 100; i >= 0; i--) {
     audioElement.volume = initialVolume * (i / 100);
     await delay(10);
   }
+  audioElement.currentTime = 0;
+  audioElement.pause();
+  audioElement.volume = initialVolume;
 }
 
 function confirmAudio() {
@@ -1150,9 +1520,20 @@ function confirmAudio() {
     musicVolume = 50;
     effectsVolume = 50;
     menuMusic.volume = 0.5;
+    gameMusic.volume = 0.5;
+    scoringMusic.volume = 0.5;
     scrollSound.volume = 0.5;
     clockSound.volume = 0.5;
     gearSound.volume = 0.05;
+    birdSound.volume = 0.5 * 1.5;
+    dogSound.volume = 0.5;
+    cricketSound.volume = 0.5;
+    trainSound.volume = 0.125;
+    doorSound.volume = 0.25;
+    newspaperSound.volume = 0.5;
+    bicycleSound.volume = 0.25;
+    bellSound.volume = 0.5;
+    drumSound.volume = 0.5;
     menuMusic.play();
     document.getElementById("confirmWrapper").remove();
   });
@@ -1160,9 +1541,20 @@ function confirmAudio() {
     musicVolume = 0;
     effectsVolume = 0;
     menuMusic.volume = 0;
+    gameMusic.volume = 0;
+    scoringMusic.volume = 0;
     scrollSound.volume = 0;
     clockSound.volume = 0;
     gearSound.volume = 0;
+    birdSound.volume = 0;
+    dogSound.volume = 0;
+    cricketSound.volume = 0;
+    trainSound.volume = 0;
+    doorSound.volume = 0;
+    newspaperSound.volume = 0;
+    bicycleSound.volume = 0;
+    bellSound.volume = 0;
+    drumSound.volume = 0;
     menuMusic.play();
     document.getElementById("confirmWrapper").remove();
   });
