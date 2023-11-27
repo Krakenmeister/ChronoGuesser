@@ -1,0 +1,6 @@
+pymupdf
+ocrmypdf
+google
+google-cloud
+google-cloud-documentai
+google.cloud.documentai_toolbox

@@ -4,13 +4,17 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="stylesheet" href="./css/styles.css" />
+    <link rel="icon" type="image/png" href="./img/chronoguesser_icon.png" />
     <title>ChronoGuesser</title>
     <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
   </head>
   <body>
-    <div id="pdfWrapper"></div>
-    <!-- <embed type="application/pdf" src="./pdfs/output/redacted.pdf" id="newspaperPdf" /> -->
-    <!-- <embed type="application/pdf" src="https://drive.google.com/viewerng/viewer?embedded=true&url=http://localhost:3000/pdfs/output/testPDF.pdf" /> -->
+    <div id="homeWrapper">
+      <div id="buttonWrapper">
+        <button class="homeButton">Play</button>
+        <button class="homeButton">About</button>
+      </div>
+    </div>
     <script src="./js/game.js"></script>
   </body>
 </html>

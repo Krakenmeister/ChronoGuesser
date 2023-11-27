@@ -475,6 +475,21 @@ body {
   height: 100%;
 }
 
+#loadingScroll {
+  position: absolute;
+  top: 2%;
+  bottom: 75%;
+  left: 35%;
+  right: 35%;
+  background-image: url("../img/scroll_full.png");
+  background-position: center;
+  background-size: 100% 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-family: "Romanesco", cursive;
+}
+
 #playScroll {
   position: absolute;
   top: 75%;
@@ -618,6 +633,13 @@ input[type="range"] {
   font-size: 12rem;
 }
 
+#scoreSubtitle {
+  margin: -1.5rem 0 1rem 0;
+  font-family: "Cinzel", serif;
+  font-weight: 700;
+  font-size: 1.5rem;
+}
+
 #scoreArticles {
   display: flex;
   flex-direction: row;
@@ -699,6 +721,17 @@ input[type="range"] {
 
 .scoreButton:focus {
   outline: 3px solid black;
+}
+
+#introWrapper {
+  position: fixed;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 102;
+  background-color: blue;
 }
 
 #confirmWrapper {
