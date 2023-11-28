@@ -75,6 +75,7 @@ body {
 }
 
 .pdfControlButton {
+  cursor: pointer;
   font-size: 4rem;
   font-family: "Romanesco", cursive;
   width: 12rem;
@@ -731,7 +732,53 @@ input[type="range"] {
   justify-content: center;
   align-items: center;
   z-index: 102;
-  background-color: blue;
+  background-image: url("../img/bg_main_no_icon.jpg");
+  background-size: cover;
+  background-position: center;
+}
+
+#introContent {
+  padding: 6rem 9rem;
+  background-image: url("../img/scroll_full.png");
+  background-size: 100% 100%;
+  background-position: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+#introTextWrapper {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+}
+
+#introText {
+  width: 40vw;
+  font-size: 1.5rem;
+}
+
+#introImg {
+  height: 20rem;
+  width: auto;
+}
+
+#introButton {
+  font-family: "Romanesco", cursive;
+  background-color: transparent;
+  outline: none;
+  border: none;
+  padding: 0.25rem 1.5rem;
+  cursor: pointer;
+  text-align: center;
+  font-size: 3rem;
+  margin-bottom: 1.5rem;
+}
+
+#introButton:focus {
+  outline: 3px solid black;
 }
 
 #confirmWrapper {
@@ -765,6 +812,7 @@ input[type="range"] {
 }
 
 .confirmButton {
+  cursor: pointer;
   background-color: transparent;
   font-size: 2rem;
   border: none;

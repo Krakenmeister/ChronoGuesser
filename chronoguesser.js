@@ -155,12 +155,17 @@ async function fetchNewspaper(language = "english", region = "na") {
 
   if (monthIssues.data.results.length < 500) {
     // Less than one page of results, we don't need to pick a day
-    let issue = randomNum(0, monthIssues.data.results.length - 1);
-    console.log(monthIssues.data.results[issue].id);
-    return monthIssues.data.results[issue].id;
+    const RETRYCOUNT = 10;
+    for (let i = 0; i < RETRYCOUNT; i++) {
+      let issue = randomNum(0, monthIssues.data.results.length - 1);
+      if (monthIssues.data.results[issue].language.length == 1) {
+        console.log(monthIssues.data.results[issue].id);
+        return monthIssues.data.results[issue].id;
+      }
+    }
   }
 
-  const RETRYCOUNT = 10;
+  const RETRYCOUNT = 15;
   for (let i = 0; i < RETRYCOUNT; i++) {
     // Pick a random day
     let day;
@@ -190,8 +195,10 @@ async function fetchNewspaper(language = "english", region = "na") {
 
     if (dayIssues.data.results.length > 0 && dayIssues.data.results.length < 500) {
       let issue = randomNum(0, dayIssues.data.results.length - 1);
-      console.log(dayIssues.data.results[issue].id);
-      return dayIssues.data.results[issue].id;
+      if (dayIssues.data.results[issue].language.length == 1) {
+        console.log(dayIssues.data.results[issue].id);
+        return dayIssues.data.results[issue].id;
+      }
     }
   }
 

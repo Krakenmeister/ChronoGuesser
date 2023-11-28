@@ -12,7 +12,7 @@ hocr = HocrTransform(
 # step to obtain ocirized pdf
 hocr.to_pdf(
     out_filename="./processing/" + sys.argv[1] + "-hocr.pdf",
-    image_filename="./processing/" + sys.argv[1] + "-loc.jp2",
+    image_filename="./processing/" + sys.argv[1] + "-loc.jpg",
     show_bounding_boxes=False,
     interword_spaces=True,
     invisible_text=True,
@@ -26,7 +26,7 @@ print("Wrote to pdf")
 def get_sensitive_data(text):
     simple_year = r"[1lITf][35-9ßb:][0-9lITßbs:][0-9lITßbs:]"
     abbreviated_month = r"\bjan[,.\s]|\bfeb[,.\s]|\bmar[,.\s]|\bapr[,.\s]|\bmay[,.\s]|\bjun[,.\s]|\bjul[,.\s]|\baug[,.\s]|\bsep[t]?[,.\s]|\boct[,.\s]|\bnov[,.\s]|\bdec[,.\s]"
-    month_day = r"\bjanuary\s[1-3]?[0-9]?|\bfebruary\s[1-3]?[0-9]?|\bmarch\s[1-3]?[0-9]?|\bapril\s[1-3]?[0-9]?|\bmay\s[1-3]?[0-9]?|\bjune\s[1-3]?[0-9]?|\bjuly\s[1-3]?[0-9]?|\baugust\s[1-3]?[0-9]?|\bseptember\s[1-3]?[0-9]?|\boctober\s[1-3]?[0-9]?|\bnovember\s[1-3]?[0-9]?|\bdecember\s[1-3]?[0-9]?"
+    month_day = r"\bjanuary\s[1-3]?[0-9]?|\bfebruary\s[1-3]?[0-9]?|\bmarch\s[1-3]?[0-9]?|\bapril\s[1-3]?[0-9]?|\bmay\s[1-3]?[0-9]?|\bjune\s[1-3]?[0-9]?|\bjuly\s[1-3]?[0-9]?|\baugu[sf]t\s[1-3]?[0-9]?|\bseptember\s[1-3]?[0-9]?|\boctober\s[1-3]?[0-9]?|\bnovember\s[1-3]?[0-9]?|\bdecember\s[1-3]?[0-9]?"
     abbreviated_year = r"['][0-9][0-9]"
 
     REGEX = re.compile("(%s|%s|%s|%s)" %

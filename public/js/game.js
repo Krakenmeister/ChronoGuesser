@@ -53,8 +53,8 @@ const headlines = [
 async function home() {
   let assetPromises = [];
   if (!mainBG) {
-    assetPromises.push(loadImage(`./img/bg_main.png`));
-    assetPromises.push(loadImage(`./img/bg_main_loading.png`));
+    assetPromises.push(loadImage(`./img/bg_main.jpg`));
+    assetPromises.push(loadImage(`./img/bg_main_loading.jpg`));
     for (let i = 0; i < 5; i++) {
       assetPromises.push(loadImage(`./img/animations/unfurl/frame_${i}.png`));
     }
@@ -377,7 +377,7 @@ async function play() {
     <div id="optionsWrapper">
       <div class="optionWrapper">
         <label for="numPapers">Number of Papers:</label>
-        <input type="number" id="numPapers" name="numPapers" min="1" max="5" value="4">
+        <input type="number" id="numPapers" name="numPapers" min="1" max="5" value="4" step="1">
       </div>
       <div class="optionWrapper">
         <label for="timeLimit">Time Limit:</label>
@@ -478,6 +478,7 @@ function secondsToString(time) {
 async function startGame(numPapers, timeLimit) {
   let endGame = async () => {
     fadeOut(gameMusic);
+    document.getElementById("homeWrapper").innerHTML = ``;
 
     let score = 0;
     let scores = [];
@@ -826,8 +827,8 @@ async function startGame(numPapers, timeLimit) {
   if (!colonialBG) {
     assetPromises.push(loadImage(`./img/bg_house_colonial.jpg`));
     assetPromises.push(loadImage(`./img/bg_house_antebellum.jpg`));
-    assetPromises.push(loadImage(`./img/bg_house_victorian.png`));
-    assetPromises.push(loadImage(`./img/bg_house_suburban.png`));
+    assetPromises.push(loadImage(`./img/bg_house_victorian.jpg`));
+    assetPromises.push(loadImage(`./img/bg_house_suburban.jpg`));
     for (let i = 0; i < 38; i++) {
       assetPromises.push(loadImage(`./img/animations/delivery_colonial/frame_${i}.png`));
     }
@@ -916,12 +917,19 @@ async function startGame(numPapers, timeLimit) {
   gameMusic.play();
 
   let introWrapper = document.createElement("div");
-  introWrapper.id = "introWraper";
+  introWrapper.id = "introWrapper";
   introWrapper.innerHTML = `
-    <button id="introButton">OK</button>
+    <div id="introContent">
+      <div id="introTextWrapper">
+        <div id="introText"><p style="margin:0;">&nbsp;&nbsp;&nbsp;&nbsp;Welcome to ChronoGuesser! Your clumsy cat accidentally spilled ink all over your American newspapers! It's okay though, because you have a time-traveling bike to help you deliver the papers. Try to guess the date they were published as close as you can!</p></div>
+        <img id="introImg" src="../img/newsboy_hello.png" alt="Delivery kid waving hello">
+      </div>
+      <button id="introButton">OK</button>
+    </div>
   `;
 
   document.getElementById("homeWrapper").appendChild(introWrapper);
+  document.getElementById("introButton").focus();
 
   document.getElementById("introButton").addEventListener("click", () => {
     if (timeLimit != 0) {
@@ -966,6 +974,8 @@ async function startGame(numPapers, timeLimit) {
     document.getElementById("pdfWrapper").style.display = "block";
     document.getElementById(`newspaper${currentPaper}`).style.visibility = "visible";
     document.getElementById("guessButton").focus();
+
+    document.getElementById("introWrapper").remove();
   });
 
   document.getElementById("guessSettingsButton").addEventListener("click", async () => {
@@ -1087,15 +1097,15 @@ async function startGame(numPapers, timeLimit) {
             <div id="guessInputs">
               <div class="guessInput">
                 <label for="guessDay">Day:</label>
-                <input type="number" class="guessInputValue" id="guessDay" name="guessDay" min="1" max="31" value="1">
+                <input type="number" class="guessInputValue" id="guessDay" name="guessDay" min="1" max="31" value="1" step="1">
               </div>
               <div class="guessInput">
                 <label for="guessMonth">Month:</label>
-                <input type="number" class="guessInputValue" id="guessMonth" name="guessMonth" min="1" max="12" value="1">
+                <input type="number" class="guessInputValue" id="guessMonth" name="guessMonth" min="1" max="12" value="1" step="1">
               </div>
               <div class="guessInput">
                 <label for="guessYear">Year:</label>
-                <input type="number" class="guessInputValue" id="guessYear" name="guessYear" min="1790" max="1963" value="1790">
+                <input type="number" class="guessInputValue" id="guessYear" name="guessYear" min="1790" max="1963" value="1790" step="1">
               </div>
             </div>
             <div id="guessButtons">
@@ -1195,6 +1205,30 @@ async function startGame(numPapers, timeLimit) {
     });
 
     document.getElementById("submitGuessButton").addEventListener("click", async () => {
+      let year = document.getElementById("guessYear").value;
+      let month = document.getElementById("guessMonth").value;
+      if (month > 12) {
+        month = 12;
+      } else if (month < 1) {
+        month = 1;
+      }
+      let dayLowerBound = 1;
+      let dayUpperBound = 30;
+      let day = document.getElementById("guessDay").value;
+      if (month == 2) {
+        if (isLeapYear(year)) {
+          dayUpperBound = 29;
+        } else {
+          dayUpperBound = 28;
+        }
+      } else if (month == 1 || month == 3 || month == 5 || month == 7 || month == 8 || month == 10 || month == 12) {
+        dayUpperBound = 31;
+      }
+      if (day < dayLowerBound) {
+        day = dayLowerBound;
+      } else if (day > dayUpperBound) {
+        day = dayUpperBound;
+      }
       guesses.push({
         year: document.getElementById("guessYear").value,
         month: document.getElementById("guessMonth").value,

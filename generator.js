@@ -21,7 +21,7 @@ async function generateNewspapers() {
         name: fileName,
         time: fs.statSync(path.join(__dirname, "/newspapers", fileName)).mtime.getTime(),
       }))
-      .sort((a, b) => b.time - a.time)
+      .sort((a, b) => a.time - b.time)
       .map((file) => file.name);
 
     if (files.length > MAX_NEWSPAPERS) {

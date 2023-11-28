@@ -4,3 +4,4 @@ package-lock.json
 newspapers/*.pdf
 processing/*.jpg
 processing/*.jp2
+processing/*.xml
